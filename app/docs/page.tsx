@@ -124,14 +124,46 @@ export default function DocsPage() {
           <h2 className="text-3xl font-semibold mb-4">Deploying the Contract (Mainnet)</h2>
           <div className="card p-6 text-sm">
             <p className="mb-3 text-[var(--ink-secondary)]">
-              <strong>Without installing the Sui CLI locally</strong> (recommended for most people):
+              <strong>Without installing the Sui CLI on your own computer</strong>:
+            </p>
+            <p className="mb-2 text-[var(--ink-secondary)]">
+              Unfortunately, Sui Move does not have a polished browser IDE like Remix yet (the Move compiler is not easily available in pure browser like solc.js).
             </p>
             <ul className="list-disc pl-5 space-y-1 mb-4 text-[var(--ink-secondary)]">
-              <li>Use <strong>Gitpod</strong> (easiest): Visit <a href="https://gitpod.io/#https://github.com/mojeebdev/promptvault" target="_blank" className="text-[var(--gold)] underline">gitpod.io/#https://github.com/mojeebdev/promptvault</a> — full VS Code in browser.</li>
-              <li>Or use <strong>GitHub Codespaces</strong>: In the repo, click Code → Codespaces → Create.</li>
-              <li>In the browser terminal, install Sui CLI once: <code>curl -fLSs https://sui.io/install.sh | sh</code></li>
-              <li>Then: <code>cd contracts && sui client publish --gas-budget 100000000</code></li>
+              <li><strong>Replit (free)</strong>: Create a new "Bash" or "Node.js" Repl at replit.com. In the Shell tab, try to install the Sui binary and publish (see detailed commands below).</li>
+              <li><strong>Gitpod (free tier)</strong>: <a href="https://gitpod.io/#https://github.com/mojeebdev/promptvault" target="_blank" className="text-[var(--gold)] underline">gitpod.io/#https://github.com/mojeebdev/promptvault</a></li>
+              <li><strong>GitHub Codespaces</strong>: Try again or from a different network/browser (sometimes it gets stuck).</li>
             </ul>
+
+            <p className="mb-2"><strong>Replit / any Linux workspace (completely free):</strong></p>
+            <pre className="bg-[var(--void-02)] p-3 rounded text-xs overflow-auto mb-3">
+{`# Paste this entire block in the Shell tab:
+
+# Download the latest mainnet Sui binary (bypasses the old 404 script)
+LATEST=$(curl -s https://api.github.com/repos/MystenLabs/sui/releases | grep -oP '"tag_name": "\\Kmainnet-v[^"]+' | head -1)
+echo "Downloading latest: $LATEST"
+curl -L -o sui.tgz "https://github.com/MystenLabs/sui/releases/download/$LATEST/sui-$LATEST-ubuntu-x86_64.tgz"
+
+tar -xzf sui.tgz
+chmod +x sui
+export PATH=$PWD:$PATH
+
+sui --version
+
+# Configure mainnet using your Tatum RPC
+sui client new-env --alias mainnet --rpc https://sui-mainnet.gateway.tatum.io
+sui client switch --env mainnet
+
+# (Optional) Create a key if you don't have one funded
+sui client new-key
+
+# Publish the package (you need some mainnet SUI in the active address for gas)
+sui client publish --gas-budget 100000000
+
+# Copy the packageId from the success output.
+# Set it in .env.local as NEXT_PUBLIC_PROMPTVAULT_PACKAGE_ID=0x...
+# Then run the helper: npx tsx scripts/publish-contract.ts (optional, for SDK flow)`}
+            </pre>
 
             <p className="mb-2">Classic CLI way (if you have it installed):</p>
             <ol className="list-decimal pl-5 space-y-2 text-[var(--ink-secondary)] mb-4">
@@ -150,10 +182,11 @@ export default function DocsPage() {
             </ul>
 
             <p className="mt-4 text-[var(--ink-muted)]">
-              See <code>scripts/publish-contract.ts</code> for a programmatic publish option using the SDK (after you have the compiled bytecode from a build).
+              <strong>Programmatic publish (SDK only, after you have the compiled modules):</strong><br />
+              See <code>scripts/publish-contract.ts</code>. You can run this in Replit, StackBlitz, or any online Node environment once you have the build artifacts from a one-time compile in a browser IDE.
             </p>
             <p className="mt-2 text-[var(--ink-muted)]">
-              Once deployed, users can publish real on-chain records instead of demo entries.
+              Once the package is deployed on mainnet, set the Package ID in your env and the app will create real on-chain PromptRecord objects.
             </p>
           </div>
         </section>

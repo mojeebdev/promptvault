@@ -66,21 +66,29 @@ async function main() {
   // - Build in Codespace: sui client publish will give you the info, or look in build/
   // - Or use `sui client publish --dry-run` to inspect.
 
-  console.log('This script is a template. You need to provide the compiled modules and dependencies.');
-  console.log('See comments in the file for how to obtain them from a build.');
+  console.log('Attempting to auto-load compiled modules from standard build location...');
 
-  // Example placeholders - replace with real data from your build
-  const modulesBase64: string[] = []; // e.g. fs.readFileSync('contracts/build/.../module.mv').toString('base64')
-  const dependencies: string[] = []; // e.g. ['0x1', '0x2', ...] from the published dependencies
+  const buildDir = path.join(process.cwd(), 'contracts', 'build', 'promptvault', 'bytecode_modules');
+  let modulesBase64: string[] = [];
+  let dependencies: string[] = ['0x1', '0x2']; // You may need to adjust stdlib + other deps from your build
+
+  if (fs.existsSync(buildDir)) {
+    const files = fs.readdirSync(buildDir).filter(f => f.endsWith('.mv'));
+    modulesBase64 = files.map(file => {
+      const bytes = fs.readFileSync(path.join(buildDir, file));
+      return bytes.toString('base64');
+    });
+    console.log(`Loaded ${modulesBase64.length} modules from ${buildDir}`);
+  }
 
   if (modulesBase64.length === 0) {
-    console.log('\n=== How to get the data ===');
-    console.log('1. Build the package (in Gitpod/Codespaces):');
-    console.log('   cd contracts');
-    console.log('   sui client publish --gas-budget 100000000 --json');
-    console.log('2. The output JSON will contain the packageId and you can extract modules from the build folder.');
-    console.log('3. For dependencies, check the build output or use known mainnet package IDs for Move stdlib etc.');
-    console.log('\nOnce you have the modules (as base64) and dependencies, edit this script or pass them.');
+    console.log('\nNo compiled modules found automatically.');
+    console.log('=== How to get the data (in your Replit / workspace terminal) ===');
+    console.log('After you successfully run "sui client publish" above, the compiled modules are automatically used by the CLI.');
+    console.log('If you want to use this SDK script instead (for example to publish from a pure Node environment):');
+    console.log('1. The build artifacts will be in contracts/build/promptvault/bytecode_modules/');
+    console.log('2. Run this script again — it should auto-detect now.');
+    console.log('\nYou can also hardcode the base64 modules if needed.');
     process.exit(0);
   }
 

@@ -72,14 +72,15 @@ Visit http://localhost:3000
 
 ### Publishing the Move contract without installing Sui CLI locally
 
-Use a browser-based environment:
+**Best free browser options right now (no local machine install):**
 
-- **Gitpod** (recommended, one-click): https://gitpod.io/#https://github.com/mojeebdev/promptvault
-- **GitHub Codespaces**: In the repo → Code → Codespaces → Create
+- **Replit** (completely free & simple): Create a "Bash" Repl → detailed steps in the in-app `/docs` page.
+- **Gitpod**: https://gitpod.io/#https://github.com/mojeebdev/promptvault
+- GitHub Codespaces (retry if it was stuck).
 
-In the browser terminal you get full access to run `sui client publish` after a one-time install of the Sui CLI.
+See the full up-to-date guide in the in-app **Docs** page (`/docs` → "Deploying the Contract").
 
-See the detailed guide (including a SDK publish script) in the in-app **Docs** page at `/docs`.
+We also included `scripts/publish-contract.ts` — a pure SDK publish script you can run in any online Node environment (Replit, StackBlitz, etc.) once you have the compiled Move bytecode.
 
 Open [http://localhost:3000](http://localhost:3000)
 
