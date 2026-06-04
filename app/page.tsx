@@ -21,7 +21,7 @@ export default function LandingPage() {
               <h3 className="text-2xl mb-3">Every Prompt, a Walrus Blob</h3>
               <p className="text-[var(--ink-secondary)] leading-relaxed">
                 Submit your AI prompt and it gets stored as a decentralized blob on Walrus.
-                Immutable. Permanent. The blob ID is written to Sui mainnet as proof of existence.
+                Immutable. Permanent. The blob ID on Walrus is the proof of existence.
                 No platform can delete it.
               </p>
             </div>
@@ -33,7 +33,7 @@ export default function LandingPage() {
               <p className="text-[var(--ink-secondary)] leading-relaxed">
                 Before storing, your prompt runs through PromptVault&apos;s AI Evaluator.
                 It scores clarity, structure, and model-fit — then suggests an improved version.
-                The evaluation itself gets stored on-chain alongside your prompt.
+                The evaluation itself gets stored as a second Walrus blob alongside your prompt.
               </p>
             </div>
 
@@ -43,7 +43,7 @@ export default function LandingPage() {
               <h3 className="text-2xl mb-3">Build on What Exists</h3>
               <p className="text-[var(--ink-secondary)] leading-relaxed">
                 Every prompt in the vault is forkable. Modify it, improve it, publish the new version.
-                The fork links back to the original blob ID on-chain. An immutable provenance chain of AI intelligence.
+                The fork links back to the original blob ID. An immutable provenance chain of AI intelligence.
               </p>
             </div>
           </div>

@@ -57,17 +57,27 @@ export async function evaluatePrompt(rawPrompt: string, targetModel: string = 'g
 
   const systemPrompt = SYSTEM_PROMPT.replace('{{TARGET_MODEL}}', targetModel);
 
-  // Primary model (free tier)
+  // Primary + fallbacks using currently available free models on OpenRouter (as of mid-2026).
+  // Primary remains google/gemini-2.5-flash-lite per project spec (the one used for the master system prompt).
+  // Free models on OpenRouter are rate-limited and can be flaky (timeouts, temporary unavailability).
+  // Multiple fallbacks + the store route now has a default evaluation so submits don't hard-fail.
   const models = [
     'google/gemini-2.5-flash-lite',
-    'meta-llama/llama-3.1-8b-instruct:free',
-    'mistralai/mistral-7b-instruct:free',
+    'google/gemma-4-31b-it:free',
+    'meta-llama/llama-3.3-70b-instruct:free',
+    'nvidia/nemotron-3-super-120b-a12b:free',
+    'deepseek/deepseek-chat-v3-0324:free',
   ];
 
   let lastError: Error | null = null;
 
   for (const model of models) {
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+
     try {
+      const controller = new AbortController();
+      timeout = setTimeout(() => controller.abort(), 30000); // 30s timeout (free models can be slow)
+
       const response = await fetch(`${OPENROUTER_BASE}/chat/completions`, {
         method: 'POST',
         headers: {
@@ -85,7 +95,10 @@ export async function evaluatePrompt(rawPrompt: string, targetModel: string = 'g
           temperature: 0.3,
           max_tokens: 1200,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeout);
 
       if (!response.ok) {
         const errText = await response.text().catch(() => '');
@@ -122,6 +135,7 @@ export async function evaluatePrompt(rawPrompt: string, targetModel: string = 'g
 
       return evaluation;
     } catch (err) {
+      if (timeout) clearTimeout(timeout);
       lastError = err as Error;
       console.warn(`[openrouter] ${model} failed, trying next fallback...`, err);
       continue;

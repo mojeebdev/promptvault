@@ -31,7 +31,7 @@ export default function DocsPage() {
             <p>
               PromptVault is the first decentralized AI prompt registry built on Sui. 
               Users can submit AI prompts that are stored as immutable Walrus blobs, 
-              evaluated by AI, and anchored on-chain with full provenance for forks.
+              evaluated by AI (Gemini via OpenRouter), and indexed in Firestore with wallet author provenance.
             </p>
             <p>
               Every prompt is paired with an AI-generated evaluation (clarity, structure, model-fit, improved version) 
@@ -66,10 +66,10 @@ export default function DocsPage() {
               </p>
             </div>
             <div className="card p-6">
-              <div className="font-semibold text-[var(--gold)] mb-2">4. On-Chain Record</div>
+              <div className="font-semibold text-[var(--gold)] mb-2">4. Metadata Index (Firestore)</div>
               <p className="text-[var(--ink-secondary)]">
-                Optionally, a Sui transaction creates a PromptRecord that points to the two blob IDs. 
-                Forks link back to the original on-chain.
+                Title, blob IDs, tags, target model, author wallet address, and fork parent are saved to Firebase Firestore 
+                for fast public vault queries and provenance.
               </p>
             </div>
           </div>
@@ -79,10 +79,10 @@ export default function DocsPage() {
         <section className="mb-14">
           <h2 className="text-3xl font-semibold mb-4">For Users</h2>
           <ul className="space-y-3 text-[var(--ink-secondary)]">
-            <li>• <strong>Submit a prompt</strong> — Go to /submit and fill out the form.</li>
+            <li>• <strong>Submit a prompt</strong> — Go to /submit (wallet connection required via @mysten/dapp-kit). Fill title, prompt, tags, and target model.</li>
             <li>• <strong>Browse the Vault</strong> — Visit /vault to explore all published prompts.</li>
             <li>• <strong>View details</strong> — Click any prompt card to see the full text, evaluation scores, and improved version.</li>
-            <li>• <strong>Fork</strong> — Use the "Fork this prompt" button on any detail page. It pre-fills the submit form with the original content and tracks the parent on-chain.</li>
+            <li>• <strong>Fork</strong> — Use the "Fork this prompt" button on any detail page. It pre-fills the submit form with the original content and tracks the parent via Firestore metadata.</li>
           </ul>
         </section>
 
@@ -99,94 +99,68 @@ export default function DocsPage() {
           </div>
 
           <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-2">On-Chain (Sui Mainnet via Tatum)</h3>
+            <h3 className="text-xl font-semibold mb-2">Wallet &amp; RPC (Sui Mainnet via Tatum)</h3>
             <p className="text-[var(--ink-secondary)] mb-2">
-              All RPC calls go through Tatum&apos;s mainnet gateway. 
-              When a package is deployed, real PromptRecord objects and events are created.
-            </p>
-            <p className="text-sm text-[var(--ink-muted)]">
-              Contract source: <code>contracts/promptvault.move</code>
+              Wallet connection uses @mysten/dapp-kit with Sui mainnet only (via Tatum&apos;s mainnet gateway). 
+              The connected address is saved as the <code>author</code> in Firestore metadata. 
+              No smart contract or on-chain PromptRecord is used — storage is purely Walrus + Firestore indexing.
             </p>
           </div>
 
           <div>
             <h3 className="text-xl font-semibold mb-2">AI Evaluator</h3>
             <p className="text-[var(--ink-secondary)]">
-              We use OpenRouter with Gemini 2.5 Flash Lite (free tier) as primary, 
-              with Llama and Mistral fallbacks. The full system prompt is designed to 
-              return structured JSON only.
+              We use OpenRouter with Google Gemini 2.5 Flash Lite (free tier) as primary, 
+              with current free fallbacks (Gemma 4, Llama 3.3, Nemotron, DeepSeek). 
+              The master system prompt forces structured JSON output (clarity, model_fit, structure, improved_prompt, etc.).
+              The store route includes retries, timeouts, and a default evaluation fallback so submits succeed even if OpenRouter is temporarily unavailable.
             </p>
           </div>
         </section>
 
-        {/* Deploying the Contract */}
+        {/* Wallet Connection */}
         <section className="mb-14">
-          <h2 className="text-3xl font-semibold mb-4">Deploying the Contract (Mainnet)</h2>
+          <h2 className="text-3xl font-semibold mb-4">Wallet Connection (Sui Mainnet)</h2>
           <div className="card p-6 text-sm">
             <p className="mb-3 text-[var(--ink-secondary)]">
-              <strong>Without installing the Sui CLI on your own computer</strong>:
-            </p>
-            <p className="mb-2 text-[var(--ink-secondary)]">
-              Unfortunately, Sui Move does not have a polished browser IDE like Remix yet (the Move compiler is not easily available in pure browser like solc.js).
+              We use <strong>@mysten/dapp-kit</strong> (official Mysten Labs React SDK for Sui) for wallet connections.
             </p>
             <ul className="list-disc pl-5 space-y-1 mb-4 text-[var(--ink-secondary)]">
-              <li><strong>Replit (free)</strong>: Create a new "Bash" or "Node.js" Repl at replit.com. In the Shell tab, try to install the Sui binary and publish (see detailed commands below).</li>
-              <li><strong>Gitpod (free tier)</strong>: <a href="https://gitpod.io/#https://github.com/mojeebdev/promptvault" target="_blank" className="text-[var(--gold)] underline">gitpod.io/#https://github.com/mojeebdev/promptvault</a></li>
-              <li><strong>GitHub Codespaces</strong>: Try again or from a different network/browser (sometimes it gets stuck).</li>
+              <li>Connect wallet button is in the Navbar (top right on desktop; inside mobile hamburger menu).</li>
+              <li><strong>Required to submit/publish</strong> a prompt — the connected wallet address is saved as <code>author</code> in Firestore.</li>
+              <li><strong>Not required to browse</strong> the vault feed (public reads only; writes are authenticated).</li>
+              <li>Restricted to <strong>Sui Mainnet only</strong> (chainId: <code>sui:mainnet</code>).</li>
+              <li>Supports Sui Wallet, Suiet, Slush, and any Sui-compatible wallet (via the kit's auto-detection).</li>
             </ul>
 
-            <p className="mb-2"><strong>Replit / any Linux workspace (completely free):</strong></p>
+            <p className="mb-2"><strong>Implementation notes:</strong></p>
             <pre className="bg-[var(--void-02)] p-3 rounded text-xs overflow-auto mb-3">
-{`# Paste this entire block in the Shell tab:
+{`// In submit page / form:
+const account = useCurrentAccount();
+if (!account) {
+  // show "Connect your wallet to submit"
+}
 
-# Download the latest mainnet Sui binary (bypasses the old 404 script)
-LATEST=$(curl -s https://api.github.com/repos/MystenLabs/sui/releases | grep -oP '"tag_name": "\\Kmainnet-v[^"]+' | head -1)
-echo "Downloading latest: $LATEST"
-curl -L -o sui.tgz "https://github.com/MystenLabs/sui/releases/download/$LATEST/sui-$LATEST-ubuntu-x86_64.tgz"
+// Pass to form:
+<SubmitForm author={account?.address} ... />
 
-tar -xzf sui.tgz
-chmod +x sui
-export PATH=$PWD:$PATH
+// In /api/store:
+body: { ..., author }
 
-sui --version
-
-# Configure mainnet using your Tatum RPC
-sui client new-env --alias mainnet --rpc https://sui-mainnet.gateway.tatum.io
-sui client switch --env mainnet
-
-# (Optional) Create a key if you don't have one funded
-sui client new-key
-
-# Publish the package (you need some mainnet SUI in the active address for gas)
-sui client publish --gas-budget 100000000
-
-# Copy the packageId from the success output.
-# Set it in .env.local as NEXT_PUBLIC_PROMPTVAULT_PACKAGE_ID=0x...
-# Then run the helper: npx tsx scripts/publish-contract.ts (optional, for SDK flow)`}
+// Saved to Firestore as:
+{ ..., author: '0x1234...' }`}
             </pre>
 
-            <p className="mb-2">Classic CLI way (if you have it installed):</p>
-            <ol className="list-decimal pl-5 space-y-2 text-[var(--ink-secondary)] mb-4">
-              <li>Have mainnet SUI in your wallet (no faucet on mainnet)</li>
-              <li>
-                <code>cd contracts</code><br />
-                <code>sui client publish --gas-budget 100000000</code>
-              </li>
-              <li>Copy the Package ID from the output</li>
-            </ol>
-
-            <p className="mb-2">After getting the Package ID:</p>
-            <ul className="list-disc pl-5 text-[var(--ink-secondary)]">
-              <li>Set <code>NEXT_PUBLIC_PROMPTVAULT_PACKAGE_ID=0x...</code> in your <code>.env.local</code></li>
-              <li>Restart the app</li>
-            </ul>
-
-            <p className="mt-4 text-[var(--ink-muted)]">
-              <strong>Programmatic publish (SDK only, after you have the compiled modules):</strong><br />
-              See <code>scripts/publish-contract.ts</code>. You can run this in Replit, StackBlitz, or any online Node environment once you have the build artifacts from a one-time compile in a browser IDE.
-            </p>
             <p className="mt-2 text-[var(--ink-muted)]">
-              Once the package is deployed on mainnet, set the Package ID in your env and the app will create real on-chain PromptRecord objects.
+              Providers are set up in <code>app/providers.tsx</code> (QueryClient + SuiClientProvider + WalletProvider with mainnet only).
+            </p>
+
+            <p className="mt-3 text-[var(--ink-muted)] text-xs">
+              <strong>Local development note:</strong> On <code>http://localhost:3000</code> (or any non-HTTPS origin), Sui wallets (Sui Wallet, etc.) will display a "Your connection is not secure" warning before allowing the connection. This is standard security behavior by the wallet extension to protect users. It is safe to approve during local testing. The warning does <strong>not</strong> appear on the production HTTPS site.
+            </p>
+
+            <p className="mt-2 text-[var(--ink-muted)] text-xs">
+              <strong>Walrus DNS errors (ENOTFOUND / EAI_AGAIN publisher.walrus.space):</strong> The Next.js server can't resolve the Walrus hostname (very common on Windows). The app now retries + forces IPv4. Quick fixes: <code>ipconfig /flushdns</code>, then <code>nslookup publisher.walrus.space 8.8.8.8</code>, restart dev server. If needed, set your adapter DNS to 8.8.8.8 / 1.1.1.1.
             </p>
           </div>
         </section>
@@ -201,9 +175,51 @@ sui client publish --gas-budget 100000000
               npm install<br />
               npm run dev
             </pre>
+            <p className="text-xs mt-1 text-[var(--ink-muted)]">
+              For local wallet testing without the "not secure" warning, try <code>next dev --experimental-https</code> (self-signed cert) or a HTTPS tunnel (ngrok, cloudflared, etc.).
+            </p>
+            <p className="mt-2">
+              Wallet: <code>npm install @mysten/dapp-kit @tanstack/react-query</code> (already done).
+            </p>
+            <p className="mt-2">
+              Dark theme only (Leo × Saturn palette). CSS custom properties defined in <code>globals.css</code> under <code>:root</code>.
+            </p>
             <p className="mt-4">
               All code is open source. See the GitHub repo for contribution guidelines.
             </p>
+          </div>
+        </section>
+
+        {/* Analytics */}
+        <section className="mb-14">
+          <h2 className="text-3xl font-semibold mb-4">Analytics</h2>
+          <div className="text-[var(--ink-secondary)]">
+            <p className="mb-2">Two analytics systems are active:</p>
+            <ul className="list-disc pl-5 mb-3">
+              <li><strong>Vercel Analytics</strong>: Automatic when deployed to Vercel (added via <code>@vercel/analytics</code> in <code>app/layout.tsx</code>).</li>
+              <li><strong>Firebase Analytics (Google Analytics 4)</strong>: Enabled via Firebase SDK. Add <code>NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID</code> (your GA4 Measurement ID from Firebase console) to <code>.env.local</code>. See <code>lib/firebase.ts</code> for initialization (uses <code>getAnalytics</code>).</li>
+            </ul>
+            <p>Both will send data to Google (via Firebase) and Vercel dashboards. Measurement ID is passed via <code>NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID</code> in the Firebase config.</p>
+          </div>
+        </section>
+
+        {/* Firebase Rules */}
+        <section className="mb-14">
+          <h2 className="text-3xl font-semibold mb-4">Firebase Firestore Rules</h2>
+          <div className="text-[var(--ink-secondary)]">
+            <p className="mb-2">Example rules (add in Firebase Console &gt; Firestore &gt; Rules; user will add these):</p>
+            <pre className="bg-[var(--void-02)] p-3 rounded text-xs overflow-auto">
+rules_version = '2';
+service cloud.firestore {'{'}
+  match /databases/{'{'}database{'}'}/documents {'{'}
+    match /prompts/{'{'}promptId{'}'} {'{'}
+      allow read: if true;  // Public read for vault feed
+      allow write: if request.auth != null;  // Or more restrictive, e.g. only from your domain
+    {'}'}
+  {'}'}
+{'}'}
+            </pre>
+            <p className="mt-2 text-xs">Tighten rules for production (e.g. validate data, rate limits, auth).</p>
           </div>
         </section>
 

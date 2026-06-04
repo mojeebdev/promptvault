@@ -3,6 +3,8 @@ import { Geist, Geist_Mono, Teko, Ubuntu } from "next/font/google";
 import "./globals.css";
 import { Navbar } from "@/components/ui/Navbar";
 import { Footer } from "@/components/ui/Footer";
+import { Providers } from "./providers";
+import { Analytics } from "@vercel/analytics/next";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -42,10 +44,11 @@ export const metadata: Metadata = {
   description: "Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and owned by no one but the chain. Built on Sui with Tatum RPC.",
   icons: {
     icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
       { url: "/favicon.png", sizes: "32x32", type: "image/png" },
     ],
-    shortcut: "/favicon.png",
-    apple: "/logo.jpg",
+    shortcut: { url: "/favicon.ico" },
+    apple: { url: "/logo.jpg" },
   },
   openGraph: {
     title: "PromptVault — Your Prompts. Stored Forever.",
@@ -83,11 +86,15 @@ export default function RootLayout({
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} ${tekko.variable} ${ubuntu.variable} h-full antialiased`}
+      data-scroll-behavior="smooth"
     >
       <body className="min-h-full flex flex-col bg-[var(--void)] text-[var(--ink-primary)]">
-        <Navbar />
-        <main className="flex-1 pt-[var(--nav-height)]">{children}</main>
-        <Footer />
+        <Providers>
+          <Navbar />
+          <main className="flex-1 pt-[var(--nav-height)]">{children}</main>
+          <Footer />
+        </Providers>
+        <Analytics />
       </body>
     </html>
   );

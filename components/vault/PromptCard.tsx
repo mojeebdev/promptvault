@@ -13,8 +13,8 @@ interface PromptCardProps {
   targetModel: string;
   score?: number;
   oneLineVerdict?: string;
-  txDigest?: string;
   parentBlobId?: string | null;
+  author?: string | null;
   isDemo?: boolean;
   evaluation?: Evaluation | null;
 }
@@ -27,8 +27,8 @@ export function PromptCard(props: PromptCardProps) {
     targetModel,
     score,
     oneLineVerdict,
-    txDigest,
     parentBlobId,
+    author,
     isDemo,
   } = props;
 
@@ -80,6 +80,12 @@ export function PromptCard(props: PromptCardProps) {
           </div>
         )}
 
+        {author && (
+          <div className="mt-2 text-[10px] text-[var(--ink-muted)]">
+            by {author.slice(0, 6)}...{author.slice(-4)}
+          </div>
+        )}
+
         <div className="mt-auto pt-4 flex items-center justify-between text-[11px] text-[var(--ink-muted)]">
           <div className="flex items-center gap-2">
             <span className="mono">blob:{promptBlobId.slice(0, 10)}…</span>
@@ -92,9 +98,7 @@ export function PromptCard(props: PromptCardProps) {
             </button>
           </div>
 
-          {txDigest && (
-            <span className="mono">tx:{txDigest.slice(0, 8)}</span>
-          )}
+
         </div>
       </div>
     </Link>

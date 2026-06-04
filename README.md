@@ -10,7 +10,7 @@ Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and
 
 **GitHub:** [https://github.com/mojeebdev/promptvault](https://github.com/mojeebdev/promptvault)
 
-**X:** [@mojeebeth](https://x.com/mojeebeth)
+**X:** [@PVonSui](https://x.com/PVonSui)
 
 > Built for the Tatum × Walrus × Sui Hackathon by Mojeeb Titilayo (BlindspotLab)
 
@@ -18,20 +18,22 @@ Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and
 
 ## Why PromptVault Wins
 
-- **Walrus is the core mechanic** — not an add-on. Every prompt + its AI evaluation is stored as real immutable Walrus blobs.
-- **True on-chain provenance** — PromptRecord objects + PromptPublished events on Sui mainnet.
-- **AI meta-layer** — Every submission is scored and improved by Gemini 2.5 Flash Lite (via OpenRouter) before storage.
-- Hits **Best Walrus Integration** + **Best Use of Tatum Tools** simultaneously.
+- **Walrus is the core mechanic** — not an add-on. Every prompt + its AI evaluation is stored as real immutable Walrus blobs (permanent, decentralized, publicly verifiable).
+- **AI meta-layer** — Every submission is scored and improved by Gemini 2.5 Flash Lite (via OpenRouter) before storage. The evaluation is also a first-class Walrus blob.
+- **Wallet provenance** — Author address from connected Sui mainnet wallet is saved in Firestore metadata (no smart contract required).
+- **Fork tracking** — Forks link back to parents via metadata for provenance.
+- Resilient networking (retries, IPv4 preference, OpenRouter fallbacks + default eval) so submits succeed even on flaky local networks.
+- Hits **Best Walrus Integration** + **Best Use of Tatum Tools** (for wallet RPC) simultaneously.
 
 ---
 
 ## How It Works
 
-1. **Submit** a prompt with title, tags, and target model.
-2. **AI Evaluation** — PromptVault's evaluator (Gemini) scores clarity, structure, model-fit and returns an improved version. The full evaluation is stored as a second Walrus blob.
-3. **Walrus Storage** — Both the original prompt and the evaluation become permanent, decentralized blobs.
-4. **On-chain Record** (optional but powerful) — A Sui transaction creates a `PromptRecord` pointing to the two blob IDs + links forks to their parent.
-5. **Vault & Fork** — Anyone can browse the public feed and fork existing prompts. Forks carry on-chain provenance.
+1. **Submit** a prompt with title, tags, and target model (while connected to a Sui mainnet wallet).
+2. **AI Evaluation** — PromptVault's evaluator (Gemini 2.5 Flash Lite via OpenRouter) scores clarity, structure, model-fit and returns an improved version. The full evaluation JSON is stored as a second Walrus blob.
+3. **Walrus Storage** — Both the original prompt (with metadata) and the AI evaluation become permanent, immutable, publicly retrievable blobs on Walrus mainnet.
+4. **Metadata Index** — Title, blob IDs, tags, target model, author wallet address, and fork parent are saved to Firebase Firestore for fast public querying and the vault feed.
+5. **Vault & Fork** — Anyone can browse the public feed (no wallet needed). Connected users can fork any prompt — the fork links back to the parent via metadata.
 
 ---
 
@@ -45,7 +47,7 @@ Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and
 | Blockchain       | Sui Mainnet (via Tatum RPC)               |
 | Storage          | Walrus Mainnet                            |
 | AI Evaluator     | Gemini 2.5 Flash Lite via OpenRouter      |
-| Client TX        | @mysten/sui                               |
+| Wallet           | @mysten/dapp-kit (Sui mainnet only)       |
 | Deploy           | Vercel                                    |
 
 ---
@@ -70,48 +72,60 @@ npm run dev
 
 Visit http://localhost:3000
 
-### Publishing the Move contract without installing Sui CLI locally
+### Wallet Connection for Submitting Prompts
 
-**Best free browser options right now (no local machine install):**
+We use **@mysten/dapp-kit** (official Mysten Labs React SDK for Sui) + @tanstack/react-query.
 
-- **Replit** (completely free & simple): Create a "Bash" Repl → detailed steps in the in-app `/docs` page.
-- **Gitpod**: https://gitpod.io/#https://github.com/mojeebdev/promptvault
-- GitHub Codespaces (retry if it was stuck).
+- Connect wallet button in the Navbar.
+- **Required** to submit/publish a prompt (the wallet address is saved as `author` in Firestore).
+- **Not required** to browse the vault (public read-only access).
+- Restricted to **Sui Mainnet** only (`sui:mainnet`).
+- Supports Sui Wallet, Suiet, Slush, and other Sui-compatible wallets.
+- On local `http://localhost` you will see a "Your connection is not secure" warning from the wallet extension (normal for non-HTTPS during dev). Approve it for testing. No warning on the live HTTPS site.
 
-See the full up-to-date guide in the in-app **Docs** page (`/docs` → "Deploying the Contract").
+Full details and implementation notes in the in-app **Docs** (`/docs` → "Wallet Connection").
 
-We also included `scripts/publish-contract.ts` — a pure SDK publish script you can run in any online Node environment (Replit, StackBlitz, etc.) once you have the compiled Move bytecode.
+Providers are in `app/providers.tsx` (mainnet config using Tatum RPC).
 
-Open [http://localhost:3000](http://localhost:3000)
+No Move contract or deployment is required — only Walrus blobs + Firestore metadata.
+
+Visit http://localhost:3000 to test locally.
 
 ### Required Keys (for full functionality)
 
-- `TATUM_API_KEY` — https://dashboard.tatum.io (for Sui RPC)
-- `OPENROUTER_API_KEY` — https://openrouter.ai (for AI evaluation)
-- Walrus mainnet endpoints are public (no key needed)
+- `TATUM_API_KEY` — https://dashboard.tatum.io (for Sui RPC, optional for core flow)
+
+**Common gotcha on Windows:** Walrus blob storage (publisher.walrus.space) sometimes has DNS resolution problems (`EAI_AGAIN` / `ENOTFOUND`) from the Next.js dev server. The app now forces IPv4 + retries. If you see it, run `ipconfig /flushdns`, test with `nslookup publisher.walrus.space 8.8.8.8`, then restart `npm run dev`. Changing your network DNS to 8.8.8.8 + 1.1.1.1 almost always fixes it.
+- `OPENROUTER_API_KEY` — https://openrouter.ai (for AI evaluation with gemini-2.5-flash-lite free tier + fallbacks)
+- Firebase config keys (see `.env.local.example`) for Firestore metadata index. Add `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (GA4 Measurement ID from Firebase console) to enable Google Analytics via the Firebase SDK (in addition to Vercel Analytics).
+- Vercel Analytics is enabled via `@vercel/analytics` in `app/layout.tsx` (automatic on Vercel, no extra env).
+
+No private keys or contract deployment required — author address comes from connected wallet.
+
+**Analytics**: Both Vercel Analytics and Firebase/Google Analytics (via measurementId) are active. See `lib/firebase.ts` for Firebase init.
+
+### Firebase Firestore Rules (example - user to add in console)
+```
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /prompts/{promptId} {
+      allow read: if true;  // Public for vault
+      allow write: if request.auth != null;
+    }
+  }
+}
+```
+Secure further for production (e.g. validate writes, add auth).
+
 
 ---
 
-## On-Chain Contract (Optional but Recommended)
+## Wallet Connection
 
-The Move contract lives in `contracts/promptvault.move`.
+See the in-app **Docs** page (`/docs` → "Wallet Connection") for full details on @mysten/dapp-kit setup, mainnet restriction, and how the author address is saved to Firestore on submit.
 
-To deploy on **Sui Mainnet**:
-
-```bash
-cd contracts
-sui client publish --gas-budget 100000000
-```
-
-Copy the published **Package ID** and set it:
-
-```env
-NEXT_PUBLIC_PROMPTVAULT_PACKAGE_ID=0x...
-```
-
-Then restart the app. You can now uncheck "Demo mode" in the submit flow and publish real on-chain records using a mainnet private key.
-
-> ⚠️ Mainnet = real SUI gas and permanent objects.
+Connect button lives in the Navbar. Required only for writes (submit); reads (vault) are public.
 
 ---
 
@@ -122,11 +136,11 @@ app/
 ├── layout.tsx          # Metadata, OG, fonts, Navbar + Footer
 ├── page.tsx            # Landing / Hero
 ├── vault/page.tsx      # Public feed
-├── submit/page.tsx     # Submit + AI eval + on-chain publish
+├── submit/page.tsx     # Submit form (wallet required) + AI eval + Walrus + Firestore
 ├── prompt/[blobId]/page.tsx
 └── api/
-    ├── store/route.ts  # Walrus + AI evaluation
-    └── prompts/route.ts # Feed (on-chain events or demo seeds)
+    ├── store/route.ts  # AI evaluation (OpenRouter) + dual Walrus blob storage + Firestore metadata
+    └── prompts/route.ts # Public feed from Firestore (with demo seeds fallback)
 
 components/
 ├── ui/                 # Navbar, Footer, Logo, ScoreBadge
@@ -135,12 +149,9 @@ components/
 └── submit/             # SubmitForm, EvaluationPanel
 
 lib/
-├── walrus.ts           # storeBlob / retrieveBlob (mainnet)
-├── sui.ts              # Client tx builder + event queries (mainnet only)
-├── tatum.ts            # Sui RPC via Tatum (mainnet)
-└── openrouter.ts       # AI Evaluator with full system prompt
-
-contracts/promptvault.move   # The on-chain PromptRecord module
+├── walrus.ts           # storeBlob / retrieveBlob (mainnet publisher/aggregator)
+├── openrouter.ts       # AI Evaluator with full master system prompt + fallbacks
+└── firebase.ts         # Firestore client (metadata index + optional Analytics)
 public/
 ├── logo.png
 ├── og-image.jpg
@@ -165,18 +176,16 @@ public/
 - **Website**: https://promptvault.mojeeb.xyz
 - **Docs**: https://promptvault.mojeeb.xyz/docs
 - **GitHub**: https://github.com/mojeebdev/promptvault
-- **X**: https://x.com/mojeebeth
+- **X**: https://x.com/PVonSui
 - **Builder**: Mojeeb Titilayo / BlindspotLab
-
+**Builder X**: https://x.com/mojeebeth
 ---
 
-## Future Improvements (Post-Hackathon)
+## Future Improvements
 
-- Deploy real Move package on mainnet + indexer for clean feed
-- Project-specific X account (@PromptVault or similar)
-- Better wallet connect (dapp-kit)
-- On-chain fork linking in the Move module
-- Dark/light theme toggle (current is pure void)
+- Better error handling and loading states
+- Search and filtering in the vault
+- User profiles / more social features
 
 ---
 
@@ -184,7 +193,7 @@ public/
 
 Built with ❤️ for the Sui ecosystem.
 
-All on-chain activity is on **Sui Mainnet**.
+Wallet connections use **Sui Mainnet** (via Tatum RPC). Storage and evaluation use Walrus mainnet + OpenRouter (no Move smart contract).
 
 ---
 

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 import { useState } from 'react';
 import { Menu, X } from 'lucide-react';
 import { Logo } from '@/components/ui/Logo';
+import { ConnectButton } from '@mysten/dapp-kit';
 
 export function Navbar() {
   const pathname = usePathname();
@@ -29,7 +30,7 @@ export function Navbar() {
         padding: '0 clamp(16px, 5vw, 80px)',
         backdropFilter: 'blur(12px)',
         WebkitBackdropFilter: 'blur(12px)',
-        backgroundColor: 'rgba(10,10,11,0.85)',
+        backgroundColor: 'var(--nav-bg)',
         borderBottom: '1px solid var(--void-border)',
       }}
     >
@@ -39,7 +40,7 @@ export function Navbar() {
       </div>
 
       {/* Right actions container - ensures hamburger is always accessible on mobile */}
-      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexShrink: 0 }}>
+      <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', flexShrink: 0, gap: '16px' }}>
         {/* Desktop Navigation */}
         <div className="hidden md:flex items-center" style={{ gap: '32px' }}>
           <Link href="/vault" className={linkClass('/vault')}>
@@ -55,6 +56,11 @@ export function Navbar() {
           >
             Publish Prompt →
           </Link>
+        </div>
+
+        {/* Wallet Connect - visible on desktop (top right). On mobile it is inside the hamburger menu (see docs). */}
+        <div className="wallet-connect hidden md:block">
+          <ConnectButton />
         </div>
 
         {/* Mobile Hamburger - only visible on mobile */}
@@ -88,7 +94,7 @@ export function Navbar() {
             top: 'var(--nav-height)',
             left: 0,
             right: 0,
-            backgroundColor: 'rgba(10,10,11,0.96)',
+            backgroundColor: 'var(--nav-dropdown-bg)',
             borderBottom: '1px solid var(--void-border)',
             padding: '16px clamp(16px, 5vw, 80px)',
             display: 'flex',
@@ -121,6 +127,11 @@ export function Navbar() {
           >
             Publish Prompt →
           </Link>
+
+          {/* Wallet connect inside mobile hamburger menu (as documented) */}
+          <div onClick={closeMobile} className="wallet-connect pt-1">
+            <ConnectButton />
+          </div>
         </div>
       )}
     </nav>

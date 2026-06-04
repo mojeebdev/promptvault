@@ -3,7 +3,7 @@ import Link from 'next/link';
 
 export const metadata = {
   title: 'The Vault — PromptVault',
-  description: 'Browse all AI prompts stored as immutable Walrus blobs on Sui.',
+  description: 'Browse all AI prompts stored as immutable Walrus blobs, indexed in Firestore for easy discovery and forking.',
 };
 
 export default function VaultPage() {
@@ -19,7 +19,7 @@ export default function VaultPage() {
         </div>
 
         <p className="max-w-md text-[var(--ink-secondary)] mb-8">
-          Every entry is a Walrus blob + an on-chain record on Sui. Fork any prompt to build on the collective intelligence.
+          Every entry is a Walrus blob (immutable) with metadata indexed in Firestore. Fork any prompt to build on the collective intelligence.
         </p>
 
         <PromptFeed />

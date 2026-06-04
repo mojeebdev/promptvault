@@ -5,7 +5,7 @@
   --font-display: 'Teko', var(--font-geist-sans), sans-serif;
   --font-body: 'Ubuntu', var(--font-geist-sans), sans-serif;
 
-  /* LEO × SATURN PALETTE */
+  /* DARK THEME (LEO × SATURN - default) */
   --void: #0A0A0B;
   --void-02: #111113;
   --void-03: #1A1A1E;
@@ -32,7 +32,13 @@
 
   /* TRANSITIONS */
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Nav (theme-aware) */
+  --nav-bg: rgba(10, 10, 11, 0.85);
+  --nav-dropdown-bg: rgba(10, 10, 11, 0.96);
 }
+
+
 
 /* Base */
 * {
@@ -313,4 +319,28 @@ textarea {
 
 @keyframes spin {
   to { transform: rotate(360deg); }
+}
+
+/* Wallet connect styling to fit theme */
+.wallet-connect button {
+  font-family: var(--font-body);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  padding: 8px 16px;
+  background: var(--void-02);
+  color: var(--ink-primary);
+  border: 1px solid var(--void-border);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.wallet-connect button:hover {
+  border-color: var(--gold-border);
+  color: var(--gold);
+}
+
+.wallet-connect button:disabled {
+  opacity: 0.6;
 }

@@ -11,8 +11,8 @@ interface PromptItem {
   targetModel: string;
   score?: number;
   oneLineVerdict?: string;
-  txDigest?: string;
   parentBlobId?: string | null;
+  author?: string | null;
   isDemo?: boolean;
 }
 
@@ -58,7 +58,7 @@ export function PromptFeed() {
     <>
       {isDemo && (
         <div className="mb-4 text-xs px-3 py-1.5 rounded bg-[var(--gold-dim)] border border-[var(--gold-border)] text-[var(--gold)] inline-block">
-          Demo data — real on-chain records will appear here once a package is deployed and used.
+          Demo data — real entries from Firestore + Walrus will appear once prompts are submitted.
         </div>
       )}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">

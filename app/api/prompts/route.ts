@@ -1,10 +1,11 @@
 // app/api/prompts/route.ts
-// Returns the public feed. Tries on-chain events first (if package configured), falls back to demo seeds.
+// Returns the public feed from Firebase Firestore metadata.
+// Enriches with Walrus blob data for title etc. if needed.
 
 import { NextResponse } from 'next/server';
 import { retrieveJSON } from '@/lib/walrus';
-import { DEFAULT_PACKAGE_ID } from '@/lib/tatum';
-import { fetchPublishedPrompts } from '@/lib/sui';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
+import { collection, getDocs, query, orderBy, limit } from 'firebase/firestore';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,8 +18,8 @@ interface FeedItem {
   targetModel: string;
   score?: number;
   oneLineVerdict?: string;
-  txDigest?: string;
   parentBlobId?: string | null;
+  author?: string | null;
   createdAt?: number;
   isDemo?: boolean;
 }
@@ -33,7 +34,6 @@ const DEMO_SEEDS: FeedItem[] = [
     targetModel: 'claude-3.5-sonnet',
     score: 92,
     oneLineVerdict: 'Excellent structured prompt for consistent, actionable code reviews.',
-    txDigest: 'demo_tx_92f3a1',
     createdAt: Date.now() - 1000 * 60 * 60 * 4,
     isDemo: true,
   },
@@ -46,7 +46,6 @@ const DEMO_SEEDS: FeedItem[] = [
     targetModel: 'gemini-2.5-flash',
     score: 87,
     oneLineVerdict: 'Strong domain-specific auditor prompt with clear output schema.',
-    txDigest: 'demo_tx_7c9e2b',
     parentBlobId: 'demo_blob_prompt_001',
     createdAt: Date.now() - 1000 * 60 * 60 * 1,
     isDemo: true,
@@ -54,52 +53,62 @@ const DEMO_SEEDS: FeedItem[] = [
 ];
 
 export async function GET() {
-  const packageId = process.env.NEXT_PUBLIC_PROMPTVAULT_PACKAGE_ID || DEFAULT_PACKAGE_ID;
-
   try {
-    if (packageId) {
-      // Real on-chain path (mainnet only)
-      const events = await fetchPublishedPrompts(packageId, 50);
+    if (isFirebaseConfigured && db) {
+      const promptsCol = collection(db, 'prompts');
+      const q = query(promptsCol, orderBy('createdAt', 'desc'), limit(50));
+      const snapshot = await getDocs(q);
 
       const items: FeedItem[] = [];
 
-      for (const ev of events) {
-        const p = ev.parsed || {};
-        // Try to enrich from the blobs if we can (best effort, non-blocking)
-        let title = p.title || 'Untitled Prompt';
-        const tags: string[] = [];
+      for (const doc of snapshot.docs) {
+        const data = doc.data() as any;
+        const promptBlobId = data.promptBlobId;
+        let title = data.title || 'Untitled Prompt';
+        const tags: string[] = data.tags || [];
         let score: number | undefined;
         let verdict: string | undefined;
-        const promptBlob: string = p.prompt_blob_id || '';
+        let targetModel = data.targetModel || 'unknown';
 
-        // If we have the blob ids embedded or can guess, try retrieve (may be slow for many)
-        // For production we'd store more in the event or have an indexer.
-        try {
-          if (promptBlob && !promptBlob.startsWith('demo')) {
-            const data = await retrieveJSON<Record<string, unknown>>(promptBlob);
-            title = (data.title as string) || title;
-            // tags = (data.tags as string[]) || [];
+        // Enrich from Walrus blob if metadata incomplete (best effort)
+        if (!data.title && promptBlobId) {
+          try {
+            const blobData = await retrieveJSON<any>(promptBlobId);
+            title = blobData.title || title;
+            targetModel = blobData.targetModel || targetModel;
+          } catch (e) {
+            // ignore
           }
-        } catch {}
+        }
+
+        // If evalBlobId, could enrich score but skip for perf, or fetch if needed
+        if (data.evalBlobId) {
+          try {
+            const evalData = await retrieveJSON<any>(data.evalBlobId);
+            score = evalData.score_overall;
+            verdict = evalData.one_line_verdict;
+          } catch {}
+        }
 
         items.push({
-          id: ev.id,
-          promptBlobId: promptBlob || p.prompt_blob_id,
+          id: doc.id,
+          promptBlobId,
+          evalBlobId: data.evalBlobId,
           title,
           tags,
-          targetModel: p.target_model || 'unknown',
+          targetModel,
           score,
           oneLineVerdict: verdict,
-          txDigest: ev.txDigest,
-          parentBlobId: p.parent_blob_id,
-          createdAt: ev.timestamp ? Number(ev.timestamp) : undefined,
+          parentBlobId: data.parentBlobId || null,
+          author: data.author || null,
+          createdAt: data.createdAt?.toMillis ? data.createdAt.toMillis() : Date.now(),
         });
       }
 
-      if (items.length > 0) return NextResponse.json({ prompts: items });
+      return NextResponse.json({ prompts: items });
     }
   } catch (e) {
-    console.warn('On-chain feed fetch failed, using demo seeds', e);
+    console.warn('Firestore feed fetch failed, using demo seeds', e);
   }
 
   // Fallback demo seeds so the vault is never empty during development / early judging

@@ -9,6 +9,7 @@ interface SubmitFormProps {
   initialTags?: string[];
   initialModel?: string;
   parentBlobId?: string | null;
+  author?: string;
   onEvaluated: (data: {
     promptBlobId: string;
     evalBlobId: string;
@@ -35,6 +36,7 @@ export function SubmitForm({
   initialTags = [],
   initialModel = 'gemini-2.5-flash',
   parentBlobId = null,
+  author,
   onEvaluated,
 }: SubmitFormProps) {
   const [title, setTitle] = useState(initialTitle);
@@ -68,6 +70,7 @@ export function SubmitForm({
           tags,
           targetModel,
           parentBlobId,
+          author,
         }),
       });
 
@@ -97,7 +100,7 @@ export function SubmitForm({
     <form onSubmit={handleSubmit} className="space-y-6">
       {parentBlobId && (
         <div className="text-xs px-3 py-2 rounded bg-[var(--gold-dim)] border border-[var(--gold-border)] text-[var(--gold)]">
-          Forking from <span className="mono">{parentBlobId}</span>. Your new version will link back on-chain.
+          Forking from <span className="mono">{parentBlobId}</span>. Your new version will link back to the original.
         </div>
       )}
 
