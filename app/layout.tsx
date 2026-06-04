@@ -88,12 +88,56 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} ${tekko.variable} ${ubuntu.variable} h-full antialiased`}
       data-scroll-behavior="smooth"
     >
-      <body className="min-h-full flex flex-col bg-[var(--void)] text-[var(--ink-primary)]">
-        <Providers>
-          <Navbar />
-          <main className="flex-1 pt-[var(--nav-height)]">{children}</main>
-          <Footer />
-        </Providers>
+      <body className="min-h-full flex flex-col text-[var(--ink-primary)]" style={{ background: 'transparent' }}>
+        {/* Fixed full-screen video background (behind everything) */}
+        <div style={{ position: 'fixed', inset: 0, zIndex: -1, overflow: 'hidden' }}>
+          {/* Desktop video ( > 768px ) */}
+          <video
+            className="hero-video-desktop"
+            autoPlay
+            muted
+            loop
+            playsInline
+            src="/videos/hero-bg-video-desktop.mp4"
+            style={{ width: '100vw', height: '100vh', objectFit: 'cover', opacity: 0.8 }}
+          />
+          {/* Mobile video ( <= 768px ) */}
+          <video
+            className="hero-video-mobile"
+            autoPlay
+            muted
+            loop
+            playsInline
+            src="/videos/hero-bg-video-mobile.mp4"
+            style={{ width: '100vw', height: '100vh', objectFit: 'cover', opacity: 0.8 }}
+          />
+        </div>
+
+        {/* Fixed dark overlay gradient above video */}
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 0,
+            pointerEvents: 'none',
+            background: `linear-gradient(
+              to bottom,
+              rgba(10,10,11,0.3) 0%,
+              rgba(10,10,11,0.1) 40%,
+              rgba(10,10,11,0.3) 100%
+            )`,
+          }}
+        />
+
+        {/* Content above overlay at z >= 1 */}
+        <div style={{ position: 'relative', zIndex: 1, background: 'transparent' }}>
+          <Providers>
+            <Navbar />
+            <main className="flex-1 pt-[var(--nav-height)]" style={{ background: 'transparent' }}>{children}</main>
+            <Footer />
+          </Providers>
+        </div>
+
         <Analytics />
       </body>
     </html>

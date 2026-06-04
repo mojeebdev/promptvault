@@ -66,7 +66,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
   }
 
   return (
-    <div className="max-w-[860px] mx-auto px-6 py-12">
+    <div className="max-w-[860px] mx-auto px-6 py-12" style={{ backgroundColor: 'rgba(10,10,11,0.05)', borderRadius: '12px', position: 'relative', zIndex: 1 }}>
       <Link href="/vault" className="text-sm text-[var(--ink-muted)] hover:text-[var(--ink-primary)]">← Back to Vault</Link>
 
       {error && (

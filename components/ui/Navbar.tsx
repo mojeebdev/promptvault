@@ -49,13 +49,6 @@ export function Navbar() {
           <Link href="/submit" className={linkClass('/submit')}>
             Submit
           </Link>
-          <Link
-            href="/submit"
-            className="btn-primary"
-            style={{ padding: '8px 20px', fontSize: '13px' }}
-          >
-            Publish Prompt →
-          </Link>
         </div>
 
         {/* Wallet Connect - visible on desktop (top right). On mobile it is inside the hamburger menu (see docs). */}
@@ -118,14 +111,6 @@ export function Navbar() {
             style={{ padding: '8px 0', fontSize: '15px' }}
           >
             Submit
-          </Link>
-          <Link
-            href="/submit"
-            className="btn-primary"
-            onClick={closeMobile}
-            style={{ padding: '10px 18px', fontSize: '14px', width: 'fit-content' }}
-          >
-            Publish Prompt →
           </Link>
 
           {/* Wallet connect inside mobile hamburger menu (as documented) */}

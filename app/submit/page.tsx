@@ -37,7 +37,7 @@ function SubmitClient() {
   const copy = (text: string) => navigator.clipboard.writeText(text);
 
   return (
-    <div className="max-w-[820px] mx-auto px-6 py-12">
+    <div className="max-w-[820px] mx-auto px-6 py-12" style={{ backgroundColor: 'rgba(10,10,11,0.05)', borderRadius: '12px', position: 'relative', zIndex: 1 }}>
       <div className="mb-8">
         <div className="uppercase text-xs tracking-[2px] text-[var(--gold)] mb-1">CONTRIBUTE</div>
         <h1 className="text-5xl font-semibold tracking-[-0.5px]">Publish a Prompt</h1>

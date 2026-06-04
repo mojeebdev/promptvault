@@ -8,7 +8,7 @@ export const metadata = {
 
 export default function VaultPage() {
   return (
-    <div className="bg-dot-grid min-h-[calc(100vh-var(--nav-height))]">
+    <div className="bg-dot-grid min-h-[calc(100vh-var(--nav-height))]" style={{ position: 'relative', zIndex: 1 }}>
       <div className="max-w-[1200px] mx-auto px-6 pt-12 pb-20 relative z-10">
         <div className="flex items-end justify-between mb-8">
           <div>

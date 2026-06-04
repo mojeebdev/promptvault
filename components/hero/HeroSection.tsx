@@ -1,7 +1,6 @@
 'use client';
 
 import Link from 'next/link';
-import { HeroVideo } from './HeroVideo';
 
 export function HeroSection() {
   return (
@@ -15,16 +14,15 @@ export function HeroSection() {
         justifyContent: 'center',
         textAlign: 'center',
         padding: '0 clamp(20px, 5vw, 80px)',
-        overflow: 'hidden',
         paddingTop: 'var(--nav-height)',
         paddingBottom: '60px',
+        zIndex: 1,
       }}
       className="bg-glint"
     >
-      <HeroVideo />
 
       {/* Content layer */}
-      <div style={{ position: 'relative', zIndex: 2, maxWidth: '820px' }}>
+      <div style={{ position: 'relative', zIndex: 1, maxWidth: '820px' }}>
         {/* Eyebrow */}
         <p
           style={{
@@ -109,7 +107,7 @@ export function HeroSection() {
           fontSize: '11px',
           letterSpacing: '0.12em',
           color: 'var(--ink-muted)',
-          zIndex: 2,
+          zIndex: 1,
         }}
       >
         ↓ What lives in the vault?
