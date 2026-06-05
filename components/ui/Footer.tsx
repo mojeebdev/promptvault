@@ -13,6 +13,9 @@ export function Footer() {
         borderTop: '1px solid var(--void-border)',
         position: 'relative',
         zIndex: 10,
+        backgroundColor: 'var(--nav-bg)',
+        backdropFilter: 'blur(12px)',
+        WebkitBackdropFilter: 'blur(12px)',
       }}
     >
       <Logo size="sm" />

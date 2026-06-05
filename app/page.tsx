@@ -65,7 +65,7 @@ export default function LandingPage() {
       </section>
 
       {/* Ready CTA */}
-      <section className="py-20 px-6 border-t border-[var(--void-border)]" style={{ backgroundColor: 'rgba(10,10,11,0.05)' }}>
+      <section className="py-20 px-6 border-t border-[var(--void-border)]" style={{ backgroundColor: 'rgba(10,10,11,0.05)', paddingBottom: '80px' }}>
         <div className="max-w-[720px] mx-auto text-center">
           <div className="text-[11px] tracking-[0.16em] uppercase text-[var(--gold)] mb-3">READY TO CONTRIBUTE?</div>
           <h2 className="text-5xl font-semibold mb-3">The vault is open.</h2>
