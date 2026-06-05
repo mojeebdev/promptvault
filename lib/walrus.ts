@@ -55,8 +55,8 @@ async function sleep(ms: number) {
 export async function storeBlob(data: string): Promise<string> {
   // Zero-cost reality on mainnet: we have to hammer the small set of known community publishers
   // until one succeeds. We cycle through them with short backoffs for best chance without user waiting forever.
-  const maxTotalAttempts = 12;
-  const perFetchTimeoutMs = 15000;
+  const maxTotalAttempts = 20; // be extra patient with flaky community publishers
+  const perFetchTimeoutMs = 12000;
 
   let lastError: Error | null = null;
 

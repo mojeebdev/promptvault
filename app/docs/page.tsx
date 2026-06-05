@@ -61,8 +61,9 @@ export default function DocsPage() {
             <div className="card p-6">
               <div className="font-semibold text-[var(--gold)] mb-2">3. Walrus Storage</div>
               <p className="text-[var(--ink-secondary)]">
-                Both your original prompt and the full AI evaluation are stored as separate 
-                immutable blobs on Walrus mainnet.
+                Prompts and evaluations are stored as immutable Walrus mainnet blobs whenever community publishers are available.
+                When they are temporarily unreachable, the full data is reliably saved to Firestore as a fallback (clearly marked)
+                and can be promoted to real Walrus blobs later via the "Retry storing to Walrus" button.
               </p>
             </div>
             <div className="card p-6">
@@ -94,18 +95,32 @@ export default function DocsPage() {
             <h3 className="text-xl font-semibold mb-2">Storage (Walrus Mainnet + Firestore fallback)</h3>
             <p className="text-[var(--ink-secondary)]">
               We attempt to store prompts + AI evaluations as immutable blobs on Walrus mainnet via the HTTP publisher API.
-              We use the only available zero-cost option: community-operated publishers (Staketab primary + others) with very aggressive
-              retry cycling (12+ attempts), outer retries, and client-side auto-retry. Reads use multiple public aggregators with fallbacks.
+              We currently use the only available zero-cost option: community-operated publishers (Staketab primary + a couple of others)
+              with very aggressive retry cycling (20 attempts), outer retries, and client-side auto-retry. Reads use multiple public
+              aggregators with fallbacks.
             </p>
             <p className="text-[var(--ink-secondary)] mt-2">
-              When community publishers are unreachable (a known, documented reality on mainnet), the submit still succeeds:
-              the full prompt text and full evaluation are saved to Firestore as a reliable fallback. The vault and detail pages
-              show the content from metadata with a clear "metadata fallback" indicator. Real Walrus blobs are attached whenever the
-              write succeeds.
+              When community publishers are unreachable (a known, documented reality on mainnet — see the official docs below), the
+              submit still succeeds: the full prompt text and full evaluation are saved to Firestore as a reliable fallback. The
+              vault and detail pages show the content from metadata with a clear "metadata fallback" indicator. A "Retry storing to
+              Walrus" button is available on fallback records so they can be promoted to real immutable blobs later.
             </p>
-            <p className="text-[var(--ink-secondary)] mt-2 text-xs">
-              <strong>Official reality:</strong> There are no public unauthenticated publishers on mainnet (see operators.json, public-aggregators-and-publishers, and the Mainnet Publisher Production Guide).
-              Running our own would require funding real SUI/WAL + hosting. This hybrid (best-effort Walrus + Firestore safety net) is the pragmatic zero-cost way to deliver a working public demo while still showcasing real Walrus integration.
+
+            <div className="mt-3 text-xs">
+              <strong>Post-Hackathon Plan:</strong> After the hackathon we will move to a paid, reliable Walrus publisher
+              (e.g. Nami Cloud, a self-hosted funded publisher, or the official Upload Relay with a properly funded wallet).
+              This will give us consistent, production-grade mainnet storage with no more reliance on volunteer community endpoints.
+              All existing fallback records will be backfilled to real Walrus blobs at that time.
+            </div>
+
+            <p className="text-[var(--ink-secondary)] mt-3 text-xs">
+              <strong>Official reality:</strong> There are no public unauthenticated publishers on mainnet (see{" "}
+              <a href="https://docs.wal.app/operators.json" target="_blank" rel="noopener noreferrer" className="underline">operators.json</a>,{" "}
+              <a href="https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers" target="_blank" rel="noopener noreferrer" className="underline">public aggregators &amp; publishers</a>, and the{" "}
+              <a href="https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide" target="_blank" rel="noopener noreferrer" className="underline">Mainnet Publisher Production Guide</a>
+              — "Do not rely on community publishers for production uploads"). Running reliable storage requires funding real SUI + WAL.
+              The current hybrid approach is the pragmatic zero-cost solution for a public hackathon demo while still delivering genuine
+              Walrus integration and never losing user data.
             </p>
           </div>
 

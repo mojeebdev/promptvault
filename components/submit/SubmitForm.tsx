@@ -215,7 +215,8 @@ export function SubmitForm({
       </button>
 
       <p className="text-[10px] text-center text-[var(--ink-muted)]">
-        Your prompt + AI eval become immutable Walrus mainnet blobs via community publishers (Staketab + others). These are free but can be temporarily slow — the form auto-retries.
+        Your prompt + AI eval are stored as immutable Walrus mainnet blobs when community publishers are available (best-effort).
+        We always save the full data to Firestore as a reliable fallback. Post-hackathon we will switch to a paid, reliable publisher.
       </p>
     </form>
   );

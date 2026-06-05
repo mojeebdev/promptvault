@@ -59,7 +59,7 @@ export function PromptCard(props: PromptCardProps) {
               <span>{targetModel}</span>
               {parentBlobId && <span className="tag">fork</span>}
               {isDemo && <span className="tag">demo</span>}
-              {walrusFailed && <span className="tag bg-amber-900/30 text-amber-400 border-amber-800">metadata fallback</span>}
+              {walrusFailed && <span className="tag bg-amber-900/30 text-amber-400 border-amber-800">fallback (will migrate to Walrus)</span>}
             </div>
           </div>
           {score !== undefined && (
@@ -92,7 +92,7 @@ export function PromptCard(props: PromptCardProps) {
         <div className="mt-auto pt-4 flex items-center justify-between text-[11px] text-[var(--ink-muted)]">
           <div className="flex items-center gap-2">
             {walrusFailed ? (
-              <span className="text-amber-400">metadata fallback</span>
+              <span className="text-amber-400">fallback (migrating to Walrus post-hackathon)</span>
             ) : (
               <>
                 <span className="mono">blob:{promptBlobId.slice(0, 10)}…</span>

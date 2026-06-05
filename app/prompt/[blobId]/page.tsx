@@ -108,7 +108,9 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
 
       {isFallback && (
         <div className="mt-4 p-3 rounded bg-amber-900/20 border border-amber-800 text-amber-400 text-sm">
-          This prompt was saved during a temporary Walrus community publisher outage. The full content + evaluation are preserved here from metadata. The immutable Walrus blobs will be attached when possible.
+          This prompt was saved using our Firestore fallback because community Walrus publishers were temporarily unavailable.
+          The full content and evaluation are safely stored. We plan to switch to a paid, reliable publisher after the hackathon
+          and will backfill all fallback records to real immutable Walrus blobs.
         </div>
       )}
 
@@ -174,6 +176,14 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
           <div className="mt-8 flex flex-wrap gap-3">
             <ForkButton promptBlobId={blobId} title={promptData.title} />
             <Link href="/submit" className="btn-ghost">Submit another prompt</Link>
+            {isFallback && (
+              <form action="/api/retry-walrus" method="POST" className="inline">
+                <input type="hidden" name="id" value={blobId} />
+                <button type="submit" className="btn-ghost">
+                  Retry storing to Walrus
+                </button>
+              </form>
+            )}
           </div>
 
           <div className="mt-10 text-[10px] text-[var(--ink-muted)] mono break-all">

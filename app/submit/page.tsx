@@ -69,7 +69,7 @@ function SubmitClient() {
             </div>
             <div className="text-xl font-medium mb-4">
               {stored.walrusFailed
-                ? 'Prompt + Evaluation saved to reliable metadata (Firestore). Walrus immutable blobs will be attached when community publishers recover.'
+                ? 'Prompt + Evaluation saved to reliable metadata (Firestore). We will switch to a paid, reliable Walrus publisher after the hackathon and backfill all fallback records.'
                 : 'Prompt + Evaluation saved as immutable Walrus blobs. Metadata indexed for the public vault feed.'}
             </div>
 
@@ -96,7 +96,8 @@ function SubmitClient() {
 
             {stored.walrusFailed && (
               <div className="text-sm text-[var(--ink-muted)]">
-                The full prompt and evaluation are preserved in the public vault. You can view them via the Vault link below.
+                The full prompt and evaluation are preserved in the public vault. We plan to migrate everything to a paid, reliable
+                Walrus publisher after the hackathon.
               </div>
             )}
           </div>

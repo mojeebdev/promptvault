@@ -18,11 +18,12 @@ Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and
 
 ## Why PromptVault Wins
 
-- **Walrus is the core mechanic** — not an add-on. Every prompt + its AI evaluation is stored as real immutable Walrus blobs (permanent, decentralized, publicly verifiable).
-- **AI meta-layer** — Every submission is scored and improved by Gemini 2.5 Flash Lite (via OpenRouter) before storage. The evaluation is also a first-class Walrus blob.
+- **Walrus is the core mechanic** — not an add-on. Prompts and evaluations are stored as immutable Walrus blobs on mainnet whenever community publishers are available (permanent, decentralized, publicly verifiable), with full data always preserved in Firestore as a reliable fallback during outages.
+- **AI meta-layer** — Every submission is scored and improved by Gemini 2.5 Flash Lite (via OpenRouter) before storage. The evaluation is also stored as a first-class Walrus blob when possible.
 - **Wallet provenance** — Author address from connected Sui mainnet wallet is saved in Firestore metadata (no smart contract required).
 - **Fork tracking** — Forks link back to parents via metadata for provenance.
 - Resilient networking (retries, IPv4 preference, OpenRouter fallbacks + default eval) so submits succeed even on flaky local networks.
+- **Future-proof architecture** — Currently uses zero-cost community publishers with strong Firestore fallback + manual retry. Post-hackathon plan: migrate to a paid, reliable Walrus publisher (e.g. Nami Cloud or self-hosted) for production-grade storage and backfill all records.
 - Hits **Best Walrus Integration** + **Best Use of Tatum Tools** (for wallet RPC) simultaneously.
 
 ---
@@ -30,8 +31,8 @@ Store, discover, and fork AI prompts as Walrus blobs — immutable, citable, and
 ## How It Works
 
 1. **Submit** a prompt with title, tags, and target model (while connected to a Sui mainnet wallet).
-2. **AI Evaluation** — PromptVault's evaluator (Gemini 2.5 Flash Lite via OpenRouter) scores clarity, structure, model-fit and returns an improved version. The full evaluation JSON is stored as a second Walrus blob.
-3. **Walrus Storage** — Both the original prompt (with metadata) and the AI evaluation become permanent, immutable, publicly retrievable blobs on Walrus mainnet.
+2. **AI Evaluation** — PromptVault's evaluator (Gemini 2.5 Flash Lite via OpenRouter) scores clarity, structure, model-fit and returns an improved version. The evaluation is stored as a first-class Walrus blob when possible (always preserved in Firestore).
+3. **Walrus Storage** — Prompts and evaluations are stored as real immutable Walrus mainnet blobs whenever community publishers are available. When they are temporarily unreachable, the full data is reliably saved to Firestore as a fallback (clearly marked in the UI) and can be promoted to real Walrus blobs later.
 4. **Metadata Index** — Title, blob IDs, tags, target model, author wallet address, and fork parent are saved to Firebase Firestore for fast public querying and the vault feed.
 5. **Vault & Fork** — Anyone can browse the public feed (no wallet needed). Connected users can fork any prompt — the fork links back to the parent via metadata.
 
@@ -95,12 +96,24 @@ Visit http://localhost:3000 to test locally.
 
 - `TATUM_API_KEY` — https://dashboard.tatum.io (for Sui RPC, optional for core flow)
 
-**Common gotcha (Walrus mainnet):** There are *no public unauthenticated publishers* on mainnet per official docs (they spend real SUI/WAL). See:
+**Walrus Storage – Current Setup & Post-Hackathon Roadmap**
+
+**Current reality (hackathon / zero-cost phase)**  
+There are **no public unauthenticated publishers** on mainnet. Every blob write costs real SUI + WAL (see official docs below). We therefore use the only zero-cost option available: community-operated publishers (primarily Staketab, with a couple of others as fallbacks).
+
+The app uses very aggressive retry logic (20 attempts + client auto-retry) across these endpoints. When they are all unreachable, we still guarantee a successful submit by saving the **full prompt text + full AI evaluation** to Firestore as a reliable fallback. These records are clearly labeled “fallback (migrating to Walrus post-hackathon)” in the UI. A “Retry storing to Walrus” button on detail pages lets us push any fallback record to real immutable blobs as soon as a reliable publisher is available.
+
+**Post-hackathon plan**  
+After the hackathon we will move to a **paid, production-grade Walrus publisher** (Nami Cloud, a self-hosted funded publisher, or the official Upload Relay with a properly funded wallet). This removes our dependence on volunteer community endpoints and gives consistent, reliable mainnet storage.
+
+All existing fallback records will be backfilled to real Walrus blobs at that time.
+
+This approach lets us deliver a working public demo today, never lose user data, still showcase genuine Walrus integration, and have a clear, responsible upgrade path.
+
+Official references:
 - https://docs.wal.app/operators.json
 - https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers
-- Mainnet Publisher Production Guide: https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide ("Do not rely on community publishers for production uploads.")
-
-The app defaults to Staketab (the primary free community mainnet publisher listed in MystenLabs/awesome-walrus) + Nami etc as fallbacks, with 5 attempts + cross-endpoint retry on 5xx/network errors. This is the practical approach for a public hackathon demo. On failure the UI shows a short "try again in a few minutes" message. Set NEXT_PUBLIC_WALRUS_PUBLISHER to switch. Aggregator reads also have fallbacks.
+- https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide ("Do not rely on community publishers for production uploads.")
 - `OPENROUTER_API_KEY` — https://openrouter.ai (for AI evaluation with gemini-2.5-flash-lite free tier + fallbacks)
 - Firebase config keys (see `.env.local.example`) for Firestore metadata index. Add `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (GA4 Measurement ID from Firebase console) to enable Google Analytics via the Firebase SDK (in addition to Vercel Analytics).
 - Vercel Analytics is enabled via `@vercel/analytics` in `app/layout.tsx` (automatic on Vercel, no extra env).
