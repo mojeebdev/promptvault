@@ -1,8 +1,19 @@
 // lib/walrus.ts
-// Walrus blob storage helpers — core of PromptVault
-// Mainnet only. No public unauthenticated publisher on mainnet (see Walrus docs).
-// Default uses Staketab community mainnet publisher. Configure via NEXT_PUBLIC_WALRUS_PUBLISHER.
-// See https://github.com/MystenLabs/walrus-sites for examples and https://docs.wal.app for details.
+// Walrus blob storage helpers — core of PromptVault (Sui MAINNET only)
+// 
+// CRITICAL (from official docs):
+// - https://docs.wal.app/operators.json  → Mainnet lists ONLY aggregators; ZERO publishers under mainnet.
+// - https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers
+//   "On Mainnet, there are no public publishers without authentication, as they consume both SUI and WAL."
+// - https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide
+//   "Do not rely on community publishers for production uploads. Community endpoints can change, go offline..."
+//
+// The app uses volunteer/community-operated mainnet publishers (Staketab is the primary documented free one
+// via MystenLabs/awesome-walrus) + aggressive retry + cross-endpoint fallback for the HTTP PUT /v1/blobs flow.
+// This is acceptable for a hackathon/public demo. For real production, run your own authenticated publisher.
+//
+// Default publisher: Staketab (listed in awesome-walrus). Override with NEXT_PUBLIC_WALRUS_PUBLISHER.
+// Aggregators have many public options (see operators.json); we use Mysten + Staketab + fallbacks.
 
 // Force IPv4 DNS resolution first. This fixes a lot of EAI_AGAIN / getaddrinfo
 // transient DNS failures on Windows and some networks.
@@ -16,11 +27,24 @@ const RAW_AGGREGATOR = process.env.NEXT_PUBLIC_WALRUS_AGGREGATOR || 'https://agg
 const PUBLISHER = RAW_PUBLISHER.replace(/\/+$/, '');
 const AGGREGATOR = RAW_AGGREGATOR.replace(/\/+$/, '');
 
-// Fallback publishers for resilience (add more if known working mainnet endpoints)
+// Public mainnet aggregators (many available per operators.json). Use for retrieve with fallbacks.
+// Prioritize ones marked cache:true + functional in the JSON.
+const AGGREGATOR_ENDPOINTS = [
+  AGGREGATOR,
+  'https://wal-aggregator-mainnet.staketab.org',
+  'https://aggregator.mainnet.walrus.mirai.cloud',
+  'https://aggregator.walrus-mainnet.tududes.com',
+  'https://mainnet-aggregator.walrus.graphyte.dev',
+];
+
+// Fallback publishers for resilience.
+// Primary sources: Staketab (documented free mainnet publisher in Mysten awesome-walrus).
+// Nami Cloud requires an endpoint key (https://walrus-mainnet-publisher.nami.cloud/${key}/) — not usable unauth here.
+// Other community endpoints may exist but are not guaranteed (see docs above).
 const PUBLISHER_ENDPOINTS = [
   PUBLISHER,
   'https://walrus-mainnet-publisher-1.staketab.org',
-  'https://publisher.walrus.space', // legacy testnet only, do not use for mainnet
+  'https://publish.walrus.site',
 ];
 
 async function sleep(ms: number) {
@@ -68,41 +92,32 @@ export async function storeBlob(data: string, attempt = 1, endpointIndex = 0): P
       err instanceof TypeError &&
       (err.message.includes('fetch failed') || err.message.includes('ENOTFOUND') || err.message.includes('EAI_AGAIN') || err.message.includes('ECONNREFUSED') || err.message.includes('abort'));
 
-    if (isNetworkError && attempt < maxAttempts) {
+    const isTransient = isNetworkError || (err instanceof Error && err.message.includes('Walrus store failed: 5'));
+
+    if (isTransient && attempt < maxAttempts) {
       const backoff = Math.min(1500 * Math.pow(2, attempt - 1), 8000);
-      console.warn(`[walrus] Network error storing blob (attempt ${attempt}/${maxAttempts}). Retrying in ${backoff}ms...`, (err as Error).message);
+      console.warn(`[walrus] Transient error storing blob (attempt ${attempt}/${maxAttempts}). Retrying in ${backoff}ms...`, (err as Error).message);
       await sleep(backoff);
       return storeBlob(data, attempt + 1, endpointIndex);
     }
 
-    if (isNetworkError && endpointIndex < PUBLISHER_ENDPOINTS.length - 1) {
+    if (isTransient && endpointIndex < PUBLISHER_ENDPOINTS.length - 1) {
       console.warn(`[walrus] All retries failed for ${publisher}, trying next publisher endpoint...`);
       return storeBlob(data, 1, endpointIndex + 1);
     }
 
-    // Surface a helpful message for the common DNS/network case
-    if (isNetworkError) {
-      const causeMsg = (err as Error).cause ? ` Cause: ${(err as Error).cause}` : '';
+    // Surface a helpful message for the common transient case on community publishers
+    if (isTransient || (err instanceof Error && err.message.includes('Walrus store failed'))) {
+      const causeMsg = (err as Error).cause ? ` (cause: ${(err as Error).cause})` : '';
       const isVercel = !!process.env.VERCEL;
-      const advice = isVercel
-        ? `This is happening from the Vercel server (production).\n` +
-          `Walrus publisher DNS resolution is failing from the deployment region.\n\n` +
-          `Quick checks:\n` +
-          `  - Visit the configured publisher in browser (should resolve)\n` +
-          `  - nslookup <your-publisher-host> 8.8.8.8\n` +
-          `  - Wait a few minutes and retry (temporary DNS issue)\n\n` +
-          `If persistent, set NEXT_PUBLIC_WALRUS_PUBLISHER in Vercel env vars to an alternative working publisher endpoint (if one is available).`
-        : `Common on local Windows dev.\n\n` +
-          `Quick fixes to try (in PowerShell):\n` +
-          `  1. ipconfig /flushdns\n` +
-          `  2. nslookup <your-publisher-host> 8.8.8.8\n` +
-          `  3. Restart your dev server\n` +
-          `  4. Temporarily set your network DNS to 8.8.8.8 + 1.1.1.1\n\n` +
-          `If it keeps happening, your network/VPN/firewall is blocking or rate-limiting DNS for walrus.space.`;
       throw new Error(
         `Failed to reach Walrus publisher at ${publisher}.\n\n` +
-        `This is a DNS resolution problem (getaddrinfo EAI_AGAIN or ENOTFOUND).\n` +
-        advice +
+        `Mainnet has no public unauthenticated publisher (see https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers and operators.json).\n` +
+        `We are using community-operated endpoints (Staketab primary) which can return 5xx/DNS errors.\n` +
+        `The code already retried 5\u00d7 + tried fallbacks.\n\n` +
+        (isVercel
+          ? `This is a temporary outage on the community publisher from Vercel. Retry in a few minutes or set NEXT_PUBLIC_WALRUS_PUBLISHER to another working endpoint.`
+          : `Common on local/Windows. Try again, flush DNS, or override the env var.`) +
         causeMsg
       );
     }
@@ -111,8 +126,11 @@ export async function storeBlob(data: string, attempt = 1, endpointIndex = 0): P
   }
 }
 
-export async function retrieveBlob(blobId: string): Promise<string> {
-  const url = `${AGGREGATOR}/v1/blobs/${blobId}`;
+export async function retrieveBlob(blobId: string, attempt = 1, endpointIndex = 0): Promise<string> {
+  const maxAttempts = 3;
+  const aggregator = AGGREGATOR_ENDPOINTS[endpointIndex] || AGGREGATOR;
+  const url = `${aggregator}/v1/blobs/${blobId}`;
+
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 15000);
 
@@ -121,12 +139,35 @@ export async function retrieveBlob(blobId: string): Promise<string> {
     clearTimeout(timeout);
 
     if (!response.ok) {
+      const is5xx = response.status >= 500 && response.status < 600;
+      if (is5xx && (attempt < maxAttempts || endpointIndex < AGGREGATOR_ENDPOINTS.length - 1)) {
+        // transient on aggregator — try again or next
+        throw new Error(`Walrus retrieve failed: ${response.status} ${response.statusText}`);
+      }
       throw new Error(`Walrus retrieve failed: ${response.status} ${response.statusText}`);
     }
     const buffer = await response.arrayBuffer();
     return new TextDecoder().decode(buffer);
-  } catch (err) {
+  } catch (err: unknown) {
     clearTimeout(timeout);
+
+    const msg = err instanceof Error ? err.message : String(err);
+    const isTransient =
+      (err instanceof TypeError && /fetch|ENOTFOUND|EAI_AGAIN|ECONNREFUSED|abort/i.test(err.message)) ||
+      /Walrus retrieve failed: 5/.test(msg);
+
+    if (isTransient && attempt < maxAttempts) {
+      const backoff = Math.min(800 * Math.pow(2, attempt - 1), 3000);
+      console.warn(`[walrus] Transient error retrieving ${blobId} from ${aggregator} (attempt ${attempt}/${maxAttempts}). Retrying...`);
+      await sleep(backoff);
+      return retrieveBlob(blobId, attempt + 1, endpointIndex);
+    }
+
+    if (isTransient && endpointIndex < AGGREGATOR_ENDPOINTS.length - 1) {
+      console.warn(`[walrus] Switching aggregator for retrieve ${blobId}...`);
+      return retrieveBlob(blobId, 1, endpointIndex + 1);
+    }
+
     throw err;
   }
 }

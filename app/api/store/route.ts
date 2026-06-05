@@ -79,12 +79,15 @@ export async function POST(req: NextRequest) {
     console.error('Store error:', error);
     let userMessage = 'Failed to store prompt. Please try again later.';
     if (error instanceof Error) {
-      if (error.message.includes('Walrus publisher') || error.message.includes('DNS resolution')) {
-        userMessage = 'Temporary issue reaching Walrus storage (DNS problem). Please try again in a few minutes.';
-      } else if (error.message.includes('AI evaluation')) {
+      const msg = error.message;
+      if (msg.includes('Walrus publisher') || msg.includes('DNS resolution') || msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')) {
+        userMessage = 'Temporary issue reaching Walrus storage. Please try again in a few minutes.';
+      } else if (msg.includes('Walrus store failed: 5')) {
+        userMessage = 'Walrus publisher is temporarily unavailable (5xx error). Please try again later.';
+      } else if (msg.includes('AI evaluation')) {
         userMessage = 'AI evaluation temporarily unavailable. Your prompt may still be stored with default evaluation.';
       } else {
-        userMessage = error.message;
+        userMessage = msg;
       }
     }
     return NextResponse.json(

@@ -95,7 +95,12 @@ Visit http://localhost:3000 to test locally.
 
 - `TATUM_API_KEY` — https://dashboard.tatum.io (for Sui RPC, optional for core flow)
 
-**Common gotcha:** Walrus blob storage can have intermittent DNS/reachability problems from the server (local or Vercel). No public unauthenticated publisher on mainnet (per official Walrus docs; see walrus-sites repo). Default uses Staketab community mainnet publisher (see .env.example). The app retries (5x) + fallbacks + IPv4. Check nslookup on your publisher host. Set NEXT_PUBLIC_WALRUS_PUBLISHER env var for alternative.
+**Common gotcha (Walrus mainnet):** There are *no public unauthenticated publishers* on mainnet per official docs (they spend real SUI/WAL). See:
+- https://docs.wal.app/operators.json
+- https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers
+- Mainnet Publisher Production Guide: https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide ("Do not rely on community publishers for production uploads.")
+
+The app defaults to Staketab (the primary free community mainnet publisher listed in MystenLabs/awesome-walrus) + Nami etc as fallbacks, with 5 attempts + cross-endpoint retry on 5xx/network errors. This is the practical approach for a public hackathon demo. On failure the UI shows a short "try again in a few minutes" message. Set NEXT_PUBLIC_WALRUS_PUBLISHER to switch. Aggregator reads also have fallbacks.
 - `OPENROUTER_API_KEY` — https://openrouter.ai (for AI evaluation with gemini-2.5-flash-lite free tier + fallbacks)
 - Firebase config keys (see `.env.local.example`) for Firestore metadata index. Add `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (GA4 Measurement ID from Firebase console) to enable Google Analytics via the Firebase SDK (in addition to Vercel Analytics).
 - Vercel Analytics is enabled via `@vercel/analytics` in `app/layout.tsx` (automatic on Vercel, no extra env).

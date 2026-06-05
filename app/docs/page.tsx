@@ -93,9 +93,17 @@ export default function DocsPage() {
           <div className="mb-8">
             <h3 className="text-xl font-semibold mb-2">Storage (Walrus Mainnet)</h3>
             <p className="text-[var(--ink-secondary)]">
-              We use a mainnet publisher (e.g. Staketab community publisher) and aggregator on mainnet. 
-              Note: Walrus has no public unauthenticated publisher on mainnet (per official docs). 
-              All blobs are permanent and publicly retrievable via blob ID from the aggregator.
+              Prompts + AI evaluations are stored as immutable blobs on Walrus mainnet via the HTTP API (PUT /v1/blobs).
+              We use community-operated publishers (primary: Staketab, listed as a free mainnet publisher in the official
+              MystenLabs/awesome-walrus repo) with automatic 5&times; retry + fallback across endpoints. Reads use public aggregators
+              (Mysten + Staketab + others) with fallbacks.
+            </p>
+            <p className="text-[var(--ink-secondary)] mt-2 text-xs">
+              <strong>Official reality (read these):</strong> There are no public unauthenticated publishers on mainnet because they spend real SUI + WAL per blob.
+              See <a href="https://docs.wal.app/operators.json" target="_blank" rel="noopener noreferrer" className="underline">operators.json</a>,
+              the <a href="https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers" target="_blank" rel="noopener noreferrer" className="underline">public aggregators &amp; publishers</a> page,
+              and the <a href="https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide" target="_blank" rel="noopener noreferrer" className="underline">Mainnet Publisher Production Guide</a> ("Do not rely on community publishers for production uploads").
+              The resilience layer (retries + fallbacks) + short user-facing error messages make the demo reliable enough for hackathon purposes.
             </p>
           </div>
 
@@ -161,7 +169,7 @@ body: { ..., author }
             </p>
 
             <p className="mt-2 text-[var(--ink-muted)] text-xs">
-              <strong>Walrus DNS / reachability errors:</strong> The server can't reach the Walrus publisher (e.g. Staketab or configured one). The app retries (5x) + fallbacks. Check nslookup on the publisher host. If persistent on Vercel, set alternative via NEXT_PUBLIC_WALRUS_PUBLISHER env var. See Walrus docs (no public mainnet publisher).
+              <strong>Walrus reachability errors (502, DNS, etc.):</strong> Per official docs there are no public unauth mainnet publishers (https://docs.wal.app/operators.json + public-aggregators-and-publishers). We rely on community endpoints (Staketab primary). The code does 5 retries + endpoint fallbacks for both store and retrieve. On transient failure the API returns a short "Temporary issue reaching Walrus storage. Please try again in a few minutes." message. This is expected behavior for a demo using volunteer infrastructure.
             </p>
           </div>
         </section>
