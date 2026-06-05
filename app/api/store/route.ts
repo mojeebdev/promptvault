@@ -34,7 +34,10 @@ export async function POST(req: NextRequest) {
       };
     }
 
-    // 2. Store original prompt as Walrus blob
+    // 2. Store original prompt as Walrus blob + 3. evaluation blob (best effort)
+    // We hammer community publishers hard (see lib/walrus.ts). If they all fail we still save
+    // the full data to Firestore so the submit "succeeds" for the user. Walrus is best-effort
+    // immutable storage; Firestore is the reliable app index + fallback content.
     const promptPayload = JSON.stringify({
       title,
       prompt,
@@ -43,19 +46,32 @@ export async function POST(req: NextRequest) {
       parentBlobId: parentBlobId || null,
       createdAt: Date.now(),
     });
-    const promptBlobId = await storeBlob(promptPayload);
 
-    // 3. Store AI evaluation as second Walrus blob
-    const evalPayload = JSON.stringify({
-      ...evaluation,
-      promptBlobId,
-      evaluatedAt: Date.now(),
-    });
-    const evalBlobId = await storeBlob(evalPayload);
+    const evalBase = evaluation;
 
-    // 4. Save metadata to Firebase Firestore for public vault indexing
+    let promptBlobId: string | null = null;
+    let evalBlobId: string | null = null;
+    let walrusFailed = false;
+
+    try {
+      promptBlobId = await storeBlob(promptPayload);
+
+      const evalPayload = JSON.stringify({
+        ...evalBase,
+        promptBlobId,
+        evaluatedAt: Date.now(),
+      });
+      evalBlobId = await storeBlob(evalPayload);
+    } catch (walrusErr) {
+      console.error('[store] Walrus best-effort failed after all retries:', walrusErr);
+      walrusFailed = true;
+      // continue — we will still save everything to Firestore
+    }
+
+    // 4. Always save to Firestore (with full content for fallback + metadata)
+    let firestoreId = '';
     if (isFirebaseConfigured && db) {
-      await addDoc(collection(db, 'prompts'), {
+      const docRef = await addDoc(collection(db, 'prompts'), {
         title,
         promptBlobId,
         evalBlobId,
@@ -64,26 +80,39 @@ export async function POST(req: NextRequest) {
         createdAt: serverTimestamp(),
         parentBlobId: parentBlobId || null,
         author: author || null,
+        // Full content for Firestore fallback when Walrus is unavailable
+        prompt: prompt,
+        evaluation: evalBase,
+        walrusFailed,
       });
+      firestoreId = docRef.id;
     }
 
-    // 5. Return blob IDs (Walrus blobs are the immutable records; verifiable via aggregator)
+    // 5. Return usable response.
+    // On Walrus success: normal blobIds (links use the real Walrus blobId)
+    // On Walrus failure: return firestoreId as the "promptBlobId" so /prompt/{id} links work,
+    // and the detail page will fall back to the embedded Firestore data.
+    const effectivePromptBlobId = promptBlobId || firestoreId;
+
     return NextResponse.json({
       success: true,
-      promptBlobId,
-      evalBlobId,
-      evaluation,
+      promptBlobId: effectivePromptBlobId,
+      evalBlobId: evalBlobId || null,
+      evaluation: evalBase,
       parentBlobId: parentBlobId || null,
+      walrusFailed,
+      // For the success panel we can also return the raw prompt if needed
+      prompt: prompt,
     });
   } catch (error: unknown) {
     console.error('Store error:', error);
     let userMessage = 'Failed to store prompt. Please try again later.';
     if (error instanceof Error) {
       const msg = error.message;
-      if (msg.includes('Walrus publisher') || msg.includes('DNS resolution') || msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')) {
-        userMessage = 'Temporary issue reaching Walrus storage. Please try again in a few minutes.';
+      if (msg.includes('Walrus publisher') || msg.includes('community publishers') || msg.includes('Temporary issue reaching Walrus') || msg.includes('DNS resolution') || msg.includes('ENOTFOUND') || msg.includes('EAI_AGAIN')) {
+        userMessage = 'Temporary issue reaching Walrus storage (community publishers busy). The form will auto-retry.';
       } else if (msg.includes('Walrus store failed: 5')) {
-        userMessage = 'Walrus publisher is temporarily unavailable (5xx error). Please try again later.';
+        userMessage = 'Walrus publisher temporarily unavailable (5xx). Auto-retrying...';
       } else if (msg.includes('AI evaluation')) {
         userMessage = 'AI evaluation temporarily unavailable. Your prompt may still be stored with default evaluation.';
       } else {

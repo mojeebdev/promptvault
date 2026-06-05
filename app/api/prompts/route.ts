@@ -12,7 +12,7 @@ export const dynamic = 'force-dynamic';
 interface FeedItem {
   id: string;
   promptBlobId: string;
-  evalBlobId?: string;
+  evalBlobId?: string | null;
   title: string;
   tags: string[];
   targetModel: string;
@@ -22,6 +22,7 @@ interface FeedItem {
   author?: string | null;
   createdAt?: number;
   isDemo?: boolean;
+  walrusFailed?: boolean;
 }
 
 const DEMO_SEEDS: FeedItem[] = [
@@ -70,34 +71,50 @@ export async function GET() {
         let verdict: string | undefined;
         let targetModel = data.targetModel || 'unknown';
 
-        // Enrich from Walrus blob if metadata incomplete (best effort)
-        if (!data.title && promptBlobId) {
-          try {
-            const blobData = await retrieveJSON<any>(promptBlobId);
-            title = blobData.title || title;
-            targetModel = blobData.targetModel || targetModel;
-          } catch (e) {
-            // ignore
+        const isFallback = data.walrusFailed || !promptBlobId;
+
+        // Enrich from Walrus if we have a real blobId
+        if (!isFallback && promptBlobId) {
+          if (!data.title) {
+            try {
+              const blobData = await retrieveJSON<any>(promptBlobId);
+              title = blobData.title || title;
+              targetModel = blobData.targetModel || targetModel;
+            } catch (e) {
+              // ignore
+            }
+          }
+
+          if (data.evalBlobId) {
+            try {
+              const evalData = await retrieveJSON<any>(data.evalBlobId);
+              score = evalData.score_overall;
+              verdict = evalData.one_line_verdict;
+            } catch {}
+          }
+        } else if (isFallback) {
+          // Use embedded full content from Firestore when Walrus write failed
+          if (data.prompt) {
+            title = data.title || title;
+          }
+          if (data.evaluation) {
+            score = data.evaluation.score_overall ?? data.evaluation.score ?? score;
+            verdict = data.evaluation.one_line_verdict ?? verdict;
+            targetModel = data.evaluation.targetModel || targetModel || data.targetModel || 'unknown';
           }
         }
 
-        // If evalBlobId, could enrich score but skip for perf, or fetch if needed
-        if (data.evalBlobId) {
-          try {
-            const evalData = await retrieveJSON<any>(data.evalBlobId);
-            score = evalData.score_overall;
-            verdict = evalData.one_line_verdict;
-          } catch {}
-        }
+        const linkBlobId = promptBlobId || doc.id; // fallback items link via firestore doc id
 
         items.push({
           id: doc.id,
-          promptBlobId,
+          promptBlobId: linkBlobId,
           evalBlobId: data.evalBlobId,
           title,
           tags,
           targetModel,
           score,
+          walrusFailed: !!data.walrusFailed,
           oneLineVerdict: verdict,
           parentBlobId: data.parentBlobId || null,
           author: data.author || null,

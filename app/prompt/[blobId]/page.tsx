@@ -3,6 +3,8 @@ import { ForkButton } from '@/components/vault/ForkButton';
 import { ScoreBadge } from '@/components/ui/ScoreBadge';
 import type { Evaluation } from '@/lib/openrouter';
 import Link from 'next/link';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 interface PromptData {
   title: string;
@@ -35,6 +37,8 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
   let evalBlobId: string | null = null;
   let error: string | null = null;
 
+  let isFallback = false;
+
   try {
     // Retrieve the original prompt blob
     const rawPrompt = await retrieveJSON<Record<string, unknown>>(blobId);
@@ -54,11 +58,40 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
       evalBlobId = rawPrompt.evalBlobId as string;
     }
   } catch (e: unknown) {
-    error = (e as Error).message || 'Failed to load blob from Walrus';
+    // Walrus retrieve failed — this param might be a Firestore fallback id (when community publishers were down)
+    error = null; // we'll try fallback
   }
 
-  // If we have an eval blob id reference we can try to fetch it too
-  if (evalBlobId) {
+  // Firestore fallback: load embedded full content if Walrus path failed or no data
+  if (!promptData && isFirebaseConfigured && db) {
+    try {
+      // Try direct doc by id (for fallback links that used the firestore doc.id)
+      const direct = await getDoc(doc(db, 'prompts', blobId));
+      if (direct.exists()) {
+        const d = direct.data() as any;
+        promptData = {
+          title: d.title || 'Untitled',
+          prompt: d.prompt || '',
+          tags: d.tags || [],
+          targetModel: d.targetModel,
+          parentBlobId: d.parentBlobId || null,
+          createdAt: d.createdAt?.toMillis?.() || undefined,
+        };
+        if (d.evaluation) {
+          evalData = d.evaluation as EvalData;
+        }
+        isFallback = true;
+      } else {
+        // Try to find a doc that has this as its promptBlobId (rare fallback case)
+        // For simplicity we skip complex query here; the direct id case covers the main fallback path.
+      }
+    } catch (fbErr) {
+      // ignore
+    }
+  }
+
+  // If we have an eval blob id reference we can try to fetch it too (only for real Walrus path)
+  if (evalBlobId && !isFallback) {
     try {
       const ev = await retrieveJSON<Record<string, unknown>>(evalBlobId);
       evalData = ev as unknown as EvalData; // shape matches Evaluation for UI
@@ -71,6 +104,12 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
 
       {error && (
         <div className="mt-8 p-6 surface text-red-400">Error loading prompt: {error}. It may be a demo seed.</div>
+      )}
+
+      {isFallback && (
+        <div className="mt-4 p-3 rounded bg-amber-900/20 border border-amber-800 text-amber-400 text-sm">
+          This prompt was saved during a temporary Walrus community publisher outage. The full content + evaluation are preserved here from metadata. The immutable Walrus blobs will be attached when possible.
+        </div>
       )}
 
       {promptData && (
@@ -94,7 +133,9 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
 
           {evalData && (
             <div className="mt-6">
-              <div className="uppercase text-xs tracking-widest text-[var(--gold)] mb-2">AI EVALUATION (stored on Walrus)</div>
+              <div className="uppercase text-xs tracking-widest text-[var(--gold)] mb-2">
+                AI EVALUATION {isFallback ? '(from metadata fallback)' : '(stored on Walrus)'}
+              </div>
               <div className="surface p-6 rounded-xl space-y-4">
                 <div className="text-lg">{evalData.one_line_verdict}</div>
 

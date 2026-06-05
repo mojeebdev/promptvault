@@ -45,6 +45,7 @@ export function SubmitForm({
   const [targetModel, setTargetModel] = useState(initialModel);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
 
   const tags = tagsInput
     .split(',')
@@ -59,41 +60,80 @@ export function SubmitForm({
     }
     setSubmitting(true);
     setError(null);
+    setRetrying(false);
 
-    try {
-      const res = await fetch('/api/store', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+    const maxClientRetries = 2; // extra client-side patience for transient Walrus community publisher issues
+    let lastErr: unknown = null;
+
+    for (let attempt = 0; attempt <= maxClientRetries; attempt++) {
+      try {
+        const res = await fetch('/api/store', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            title: title.trim(),
+            prompt: prompt.trim(),
+            tags,
+            targetModel,
+            parentBlobId,
+            author,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+          const errMsg = data.error || 'Failed to store prompt';
+          // Only auto-retry on the specific transient Walrus messages our backend returns
+          const isTransientWalrus =
+            errMsg.includes('Temporary issue reaching Walrus') ||
+            errMsg.includes('Walrus publisher is temporarily unavailable') ||
+            errMsg.includes('community publishers') ||
+            errMsg.includes('Failed to reach Walrus publisher');
+
+          if (isTransientWalrus && attempt < maxClientRetries) {
+            setRetrying(true);
+            setError(`Walrus community publishers busy (common on mainnet). Auto-retrying (${attempt + 1}/${maxClientRetries})...`);
+            await new Promise(r => setTimeout(r, 2200 + attempt * 800));
+            continue;
+          }
+          throw new Error(errMsg);
+        }
+
+        setRetrying(false);
+        onEvaluated({
+          promptBlobId: data.promptBlobId,
+          evalBlobId: data.evalBlobId,
+          evaluation: data.evaluation,
           title: title.trim(),
           prompt: prompt.trim(),
           tags,
           targetModel,
           parentBlobId,
-          author,
-        }),
-      });
+        });
+        return; // success
+      } catch (err: unknown) {
+        lastErr = err;
+        const msg = (err as Error).message || 'Something went wrong';
 
-      const data = await res.json();
-      if (!res.ok || !data.success) {
-        throw new Error(data.error || 'Failed to store prompt');
+        const isTransientWalrus =
+          msg.includes('Temporary issue reaching Walrus') ||
+          msg.includes('Walrus publisher is temporarily unavailable') ||
+          msg.includes('community publishers') ||
+          msg.includes('Failed to reach Walrus publisher');
+
+        if (isTransientWalrus && attempt < maxClientRetries) {
+          setRetrying(true);
+          setError(`Walrus community publishers busy (common on mainnet). Auto-retrying (${attempt + 1}/${maxClientRetries})...`);
+          await new Promise(r => setTimeout(r, 2200 + attempt * 800));
+          continue;
+        }
+        setError(msg);
+        break;
       }
-
-      onEvaluated({
-        promptBlobId: data.promptBlobId,
-        evalBlobId: data.evalBlobId,
-        evaluation: data.evaluation,
-        title: title.trim(),
-        prompt: prompt.trim(),
-        tags,
-        targetModel,
-        parentBlobId,
-      });
-    } catch (err: unknown) {
-      setError((err as Error).message || 'Something went wrong');
-    } finally {
-      setSubmitting(false);
     }
+
+    setRetrying(false);
+    // final error already set
   }
 
   return (
@@ -158,18 +198,24 @@ export function SubmitForm({
         )}
       </div>
 
-      {error && <div className="text-red-400 text-sm">{error}</div>}
+      {error && (
+        <div className={`text-sm p-3 rounded ${retrying ? 'bg-[var(--gold-dim)] text-[var(--gold)] border border-[var(--gold-border)]' : 'text-red-400'}`}>
+          {error}
+        </div>
+      )}
 
       <button
         type="submit"
         disabled={submitting || !title.trim() || !prompt.trim()}
         className="btn-primary w-full justify-center text-base"
       >
-        {submitting ? 'Evaluating with AI + Storing to Walrus…' : 'Evaluate & Store to Walrus'}
+        {submitting
+          ? (retrying ? 'Retrying on Walrus community publishers…' : 'Evaluating with AI + Storing to Walrus…')
+          : 'Evaluate & Store to Walrus'}
       </button>
 
       <p className="text-[10px] text-center text-[var(--ink-muted)]">
-        Your prompt + the AI evaluation will both become immutable Walrus blobs.
+        Your prompt + AI eval become immutable Walrus mainnet blobs via community publishers (Staketab + others). These are free but can be temporarily slow — the form auto-retries.
       </p>
     </form>
   );

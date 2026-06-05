@@ -14,6 +14,7 @@ interface PromptItem {
   parentBlobId?: string | null;
   author?: string | null;
   isDemo?: boolean;
+  walrusFailed?: boolean;
 }
 
 export function PromptFeed() {

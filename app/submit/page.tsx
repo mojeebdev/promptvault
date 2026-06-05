@@ -10,13 +10,14 @@ import { useCurrentAccount } from '@mysten/dapp-kit';
 
 interface StoredData {
   promptBlobId: string;
-  evalBlobId: string;
+  evalBlobId: string | null;
   evaluation: Evaluation;
   title: string;
   prompt: string;
   tags: string[];
   targetModel: string;
   parentBlobId?: string | null;
+  walrusFailed?: boolean;
 }
 
 // Inner component that safely uses useSearchParams (must be wrapped in Suspense by parent)
@@ -63,27 +64,41 @@ function SubmitClient() {
         <div className="space-y-8">
           {/* Success + blobs */}
           <div className="surface p-6 rounded-xl">
-            <div className="flex items-center gap-2 text-emerald-400 text-sm mb-1">✓ STORED ON WALRUS + FIRESTORE</div>
-            <div className="text-xl font-medium mb-4">Prompt + Evaluation saved as immutable Walrus blobs. Metadata indexed for the public vault feed.</div>
-
-            <div className="grid gap-3 text-sm">
-              <div className="flex items-center justify-between bg-[var(--void-02)] p-3 rounded">
-                <span className="text-[var(--ink-muted)]">Prompt Blob ID</span>
-                <div className="flex items-center gap-2">
-                  <span className="mono text-[var(--gold)]">{stored.promptBlobId}</span>
-                  <button onClick={() => copy(stored.promptBlobId)} className="copy-btn"><Copy size={14} /></button>
-                  <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.promptBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
-                </div>
-              </div>
-              <div className="flex items-center justify-between bg-[var(--void-02)] p-3 rounded">
-                <span className="text-[var(--ink-muted)]">Eval Blob ID</span>
-                <div className="flex items-center gap-2">
-                  <span className="mono text-[var(--gold)]">{stored.evalBlobId}</span>
-                  <button onClick={() => copy(stored.evalBlobId)} className="copy-btn"><Copy size={14} /></button>
-                  <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.evalBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
-                </div>
-              </div>
+            <div className="flex items-center gap-2 text-emerald-400 text-sm mb-1">
+              {stored.walrusFailed ? '✓ SAVED (Walrus fallback)' : '✓ STORED ON WALRUS + FIRESTORE'}
             </div>
+            <div className="text-xl font-medium mb-4">
+              {stored.walrusFailed
+                ? 'Prompt + Evaluation saved to reliable metadata (Firestore). Walrus immutable blobs will be attached when community publishers recover.'
+                : 'Prompt + Evaluation saved as immutable Walrus blobs. Metadata indexed for the public vault feed.'}
+            </div>
+
+            {!stored.walrusFailed && stored.promptBlobId && stored.evalBlobId && (
+              <div className="grid gap-3 text-sm">
+                <div className="flex items-center justify-between bg-[var(--void-02)] p-3 rounded">
+                  <span className="text-[var(--ink-muted)]">Prompt Blob ID</span>
+                  <div className="flex items-center gap-2">
+                    <span className="mono text-[var(--gold)]">{stored.promptBlobId}</span>
+                    <button onClick={() => copy(stored.promptBlobId)} className="copy-btn"><Copy size={14} /></button>
+                    <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.promptBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
+                  </div>
+                </div>
+                <div className="flex items-center justify-between bg-[var(--void-02)] p-3 rounded">
+                  <span className="text-[var(--ink-muted)]">Eval Blob ID</span>
+                  <div className="flex items-center gap-2">
+                    <span className="mono text-[var(--gold)]">{stored.evalBlobId}</span>
+                    <button onClick={() => copy(stored.evalBlobId!)} className="copy-btn"><Copy size={14} /></button>
+                    <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.evalBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {stored.walrusFailed && (
+              <div className="text-sm text-[var(--ink-muted)]">
+                The full prompt and evaluation are preserved in the public vault. You can view them via the Vault link below.
+              </div>
+            )}
           </div>
 
           {/* Evaluation */}

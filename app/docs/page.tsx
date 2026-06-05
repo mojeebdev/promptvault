@@ -91,19 +91,21 @@ export default function DocsPage() {
           <h2 className="text-3xl font-semibold mb-4">Technical Details</h2>
 
           <div className="mb-8">
-            <h3 className="text-xl font-semibold mb-2">Storage (Walrus Mainnet)</h3>
+            <h3 className="text-xl font-semibold mb-2">Storage (Walrus Mainnet + Firestore fallback)</h3>
             <p className="text-[var(--ink-secondary)]">
-              Prompts + AI evaluations are stored as immutable blobs on Walrus mainnet via the HTTP API (PUT /v1/blobs).
-              We use community-operated publishers (primary: Staketab, listed as a free mainnet publisher in the official
-              MystenLabs/awesome-walrus repo) with automatic 5&times; retry + fallback across endpoints. Reads use public aggregators
-              (Mysten + Staketab + others) with fallbacks.
+              We attempt to store prompts + AI evaluations as immutable blobs on Walrus mainnet via the HTTP publisher API.
+              We use the only available zero-cost option: community-operated publishers (Staketab primary + others) with very aggressive
+              retry cycling (12+ attempts), outer retries, and client-side auto-retry. Reads use multiple public aggregators with fallbacks.
+            </p>
+            <p className="text-[var(--ink-secondary)] mt-2">
+              When community publishers are unreachable (a known, documented reality on mainnet), the submit still succeeds:
+              the full prompt text and full evaluation are saved to Firestore as a reliable fallback. The vault and detail pages
+              show the content from metadata with a clear "metadata fallback" indicator. Real Walrus blobs are attached whenever the
+              write succeeds.
             </p>
             <p className="text-[var(--ink-secondary)] mt-2 text-xs">
-              <strong>Official reality (read these):</strong> There are no public unauthenticated publishers on mainnet because they spend real SUI + WAL per blob.
-              See <a href="https://docs.wal.app/operators.json" target="_blank" rel="noopener noreferrer" className="underline">operators.json</a>,
-              the <a href="https://docs.wal.app/docs/system-overview/public-aggregators-and-publishers" target="_blank" rel="noopener noreferrer" className="underline">public aggregators &amp; publishers</a> page,
-              and the <a href="https://docs.wal.app/docs/operator-guide/publishers/mainnet-production-guide" target="_blank" rel="noopener noreferrer" className="underline">Mainnet Publisher Production Guide</a> ("Do not rely on community publishers for production uploads").
-              The resilience layer (retries + fallbacks) + short user-facing error messages make the demo reliable enough for hackathon purposes.
+              <strong>Official reality:</strong> There are no public unauthenticated publishers on mainnet (see operators.json, public-aggregators-and-publishers, and the Mainnet Publisher Production Guide).
+              Running our own would require funding real SUI/WAL + hosting. This hybrid (best-effort Walrus + Firestore safety net) is the pragmatic zero-cost way to deliver a working public demo while still showcasing real Walrus integration.
             </p>
           </div>
 

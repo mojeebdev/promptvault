@@ -17,6 +17,7 @@ interface PromptCardProps {
   author?: string | null;
   isDemo?: boolean;
   evaluation?: Evaluation | null;
+  walrusFailed?: boolean;
 }
 
 export function PromptCard(props: PromptCardProps) {
@@ -30,6 +31,7 @@ export function PromptCard(props: PromptCardProps) {
     parentBlobId,
     author,
     isDemo,
+    walrusFailed,
   } = props;
 
   const detailHref = `/prompt/${encodeURIComponent(promptBlobId)}`;
@@ -57,6 +59,7 @@ export function PromptCard(props: PromptCardProps) {
               <span>{targetModel}</span>
               {parentBlobId && <span className="tag">fork</span>}
               {isDemo && <span className="tag">demo</span>}
+              {walrusFailed && <span className="tag bg-amber-900/30 text-amber-400 border-amber-800">metadata fallback</span>}
             </div>
           </div>
           {score !== undefined && (
@@ -88,17 +91,21 @@ export function PromptCard(props: PromptCardProps) {
 
         <div className="mt-auto pt-4 flex items-center justify-between text-[11px] text-[var(--ink-muted)]">
           <div className="flex items-center gap-2">
-            <span className="mono">blob:{promptBlobId.slice(0, 10)}…</span>
-            <button
-              onClick={(e) => copy(promptBlobId, e)}
-              className="copy-btn"
-              title="Copy blob ID"
-            >
-              <Copy size={12} />
-            </button>
+            {walrusFailed ? (
+              <span className="text-amber-400">metadata fallback</span>
+            ) : (
+              <>
+                <span className="mono">blob:{promptBlobId.slice(0, 10)}…</span>
+                <button
+                  onClick={(e) => copy(promptBlobId, e)}
+                  className="copy-btn"
+                  title="Copy blob ID"
+                >
+                  <Copy size={12} />
+                </button>
+              </>
+            )}
           </div>
-
-
         </div>
       </div>
     </Link>
