@@ -109,19 +109,30 @@ No private keys or contract deployment required — author address comes from co
 
 **Analytics**: Both Vercel Analytics and Firebase/Google Analytics (via measurementId) are active. See `lib/firebase.ts` for Firebase init.
 
-### Firebase Firestore Rules (example - user to add in console)
+### Firebase Firestore Rules (required for server writes)
 ```
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /prompts/{promptId} {
-      allow read: if true;  // Public for vault
-      allow write: if request.auth != null;
+      allow read: if true;   // Public vault feed
+      allow write: if true;  // Public submissions from our backend (Next.js API routes have no Firebase Auth).
+                             // Add App Check / rate limits for production.
     }
   }
 }
 ```
-Secure further for production (e.g. validate writes, add auth).
+The old `request.auth != null` version causes `PERMISSION_DENIED` on backend writes. Use the version above.
+
+We also committed `firestore.indexes.json`, `firestore.rules`, `firebase.json`, and `.firebaserc`. Use `npm run deploy:firestore` (or `firebase deploy --only firestore`) to deploy rules + indexes.
+
+**Important for the index (single-field descending on createdAt):**  
+The composite indexes file is kept minimal. After deploying, if the Vault feed shows only demo data, create the required single-field index in the Firebase Console:
+
+1. Go to Firestore Database → Indexes → **Single field indexes** tab.
+2. For the `prompts` collection, ensure there is an index on the `createdAt` field with "Descending" queries enabled (or use the "Create index" link that appears in server logs / error when you first load `/vault` or call `/api/prompts` — it will prefill the correct index for you).
+
+The index usually builds in 1-5 minutes. The API already falls back gracefully to demo seeds until it's ready.
 
 
 ---

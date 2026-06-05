@@ -7,7 +7,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "deploy:firestore": "firebase deploy --only firestore",
+    "firebase:setup": "echo 'Run this after firebase login to set project and deploy: npm run deploy:firestore. Then create the single-field index in console if vault shows only demos.'"
   },
   "dependencies": {
     "@mysten/dapp-kit": "^1.0.6",
@@ -26,6 +28,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.7",
+    "firebase-tools": "^15.19.1",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

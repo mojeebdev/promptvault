@@ -69,23 +69,32 @@ export async function POST(req: NextRequest) {
     }
 
     // 4. Always save to Firestore (with full content for fallback + metadata)
+    // Wrapped in try/catch because Firestore rules or temporary issues should not
+    // kill the entire submit (especially when Walrus is already down).
     let firestoreId = '';
+    let firestoreFailed = false;
     if (isFirebaseConfigured && db) {
-      const docRef = await addDoc(collection(db, 'prompts'), {
-        title,
-        promptBlobId,
-        evalBlobId,
-        targetModel: targetModel || 'gemini-2.5-flash',
-        tags: tags || [],
-        createdAt: serverTimestamp(),
-        parentBlobId: parentBlobId || null,
-        author: author || null,
-        // Full content for Firestore fallback when Walrus is unavailable
-        prompt: prompt,
-        evaluation: evalBase,
-        walrusFailed,
-      });
-      firestoreId = docRef.id;
+      try {
+        const docRef = await addDoc(collection(db, 'prompts'), {
+          title,
+          promptBlobId,
+          evalBlobId,
+          targetModel: targetModel || 'gemini-2.5-flash',
+          tags: tags || [],
+          createdAt: serverTimestamp(),
+          parentBlobId: parentBlobId || null,
+          author: author || null,
+          // Full content for Firestore fallback when Walrus is unavailable
+          prompt: prompt,
+          evaluation: evalBase,
+          walrusFailed,
+        });
+        firestoreId = docRef.id;
+      } catch (fsErr) {
+        console.error('[store] Firestore write failed (non-fatal):', fsErr);
+        firestoreFailed = true;
+        // Still return success so the user sees their evaluation
+      }
     }
 
     // 5. Return usable response.
@@ -101,6 +110,7 @@ export async function POST(req: NextRequest) {
       evaluation: evalBase,
       parentBlobId: parentBlobId || null,
       walrusFailed,
+      firestoreFailed,
       // For the success panel we can also return the raw prompt if needed
       prompt: prompt,
     });

@@ -218,19 +218,31 @@ body: { ..., author }
         <section className="mb-14">
           <h2 className="text-3xl font-semibold mb-4">Firebase Firestore Rules</h2>
           <div className="text-[var(--ink-secondary)]">
-            <p className="mb-2">Example rules (add in Firebase Console &gt; Firestore &gt; Rules; user will add these):</p>
+            <p className="mb-2">Recommended rules (paste into Firebase Console &gt; Firestore &gt; Rules):</p>
             <pre className="bg-[var(--void-02)] p-3 rounded text-xs overflow-auto">
 rules_version = '2';
 service cloud.firestore {'{'}
   match /databases/{'{'}database{'}'}/documents {'{'}
     match /prompts/{'{'}promptId{'}'} {'{'}
-      allow read: if true;  // Public read for vault feed
-      allow write: if request.auth != null;  // Or more restrictive, e.g. only from your domain
+      allow read: if true;   // Public vault feed
+      allow write: if true;  // Public submissions. The backend writes from Next.js API routes (no Firebase Auth).
+                             // For production add App Check or rate limiting.
     {'}'}
   {'}'}
 {'}'}
             </pre>
-            <p className="mt-2 text-xs">Tighten rules for production (e.g. validate data, rate limits, auth).</p>
+            <p className="mt-2 text-xs">
+              <strong>Important:</strong> Rules with <code>request.auth != null</code> will cause <code>PERMISSION_DENIED</code> errors on server writes (as seen in logs).
+              Use the open-write version above so the fallback path works when Walrus publishers are down.
+            </p>
+            <p className="mt-2 text-xs">
+              We have prepared <code>firestore.rules</code>, <code>firestore.indexes.json</code>, <code>firebase.json</code>, and <code>.firebaserc</code> in the repo root.
+              Use <code>npm run deploy:firestore</code> (after <code>npx firebase login</code>) to deploy.
+            </p>
+            <p className="mt-2 text-xs">
+              <strong>Post-deploy index step (required for real vault feed):</strong> The main query orders by <code>createdAt</code> descending. If the Vault shows only demo seeds after deploy, create the single-field index:
+              <br />Firebase Console → Firestore → Indexes → <strong>Single field indexes</strong> → ensure <code>prompts</code> collection has a descending index on <code>createdAt</code>, or click the "Create index" link shown in logs when loading the feed (it autofills the exact index needed). The index builds in ~1-5 min.
+            </p>
           </div>
         </section>
 
