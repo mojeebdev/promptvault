@@ -93,8 +93,9 @@ export default function DocsPage() {
           <div className="mb-8">
             <h3 className="text-xl font-semibold mb-2">Storage (Walrus Mainnet)</h3>
             <p className="text-[var(--ink-secondary)]">
-              We use the official Walrus publisher and aggregator endpoints on mainnet. 
-              All blobs are permanent and publicly retrievable via blob ID.
+              We use a mainnet publisher (e.g. Staketab community publisher) and aggregator on mainnet. 
+              Note: Walrus has no public unauthenticated publisher on mainnet (per official docs). 
+              All blobs are permanent and publicly retrievable via blob ID from the aggregator.
             </p>
           </div>
 
@@ -160,7 +161,7 @@ body: { ..., author }
             </p>
 
             <p className="mt-2 text-[var(--ink-muted)] text-xs">
-              <strong>Walrus DNS / reachability errors (ENOTFOUND / EAI_AGAIN for publisher.walrus.space):</strong> The server (local or Vercel) can't resolve the Walrus publisher. The app retries automatically (up to 5x with backoff) + forces IPv4 + tries fallback endpoints. On Vercel: often temporary; retry submit or wait. Check <code>nslookup publisher.walrus.space 8.8.8.8</code>. If persistent, verify env var or try alternative publisher via <code>NEXT_PUBLIC_WALRUS_PUBLISHER</code>.
+              <strong>Walrus DNS / reachability errors:</strong> The server can't reach the Walrus publisher (e.g. Staketab or configured one). The app retries (5x) + fallbacks. Check nslookup on the publisher host. If persistent on Vercel, set alternative via NEXT_PUBLIC_WALRUS_PUBLISHER env var. See Walrus docs (no public mainnet publisher).
             </p>
           </div>
         </section>

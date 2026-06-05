@@ -1,14 +1,16 @@
 // lib/walrus.ts
 // Walrus blob storage helpers — core of PromptVault
-// Mainnet only: publisher.walrus.space + aggregator.walrus.space
+// Mainnet only. No public unauthenticated publisher on mainnet (see Walrus docs).
+// Default uses Staketab community mainnet publisher. Configure via NEXT_PUBLIC_WALRUS_PUBLISHER.
+// See https://github.com/MystenLabs/walrus-sites for examples and https://docs.wal.app for details.
 
 // Force IPv4 DNS resolution first. This fixes a lot of EAI_AGAIN / getaddrinfo
 // transient DNS failures on Windows and some networks.
 import dns from 'node:dns';
 dns.setDefaultResultOrder('ipv4first');
 
-const RAW_PUBLISHER = process.env.NEXT_PUBLIC_WALRUS_PUBLISHER || 'https://publisher.walrus.space';
-const RAW_AGGREGATOR = process.env.NEXT_PUBLIC_WALRUS_AGGREGATOR || 'https://aggregator.walrus.space';
+const RAW_PUBLISHER = process.env.NEXT_PUBLIC_WALRUS_PUBLISHER || 'https://walrus-mainnet-publisher-1.staketab.org';
+const RAW_AGGREGATOR = process.env.NEXT_PUBLIC_WALRUS_AGGREGATOR || 'https://aggregator.walrus-mainnet.walrus.space';
 
 // Normalize: remove trailing slashes
 const PUBLISHER = RAW_PUBLISHER.replace(/\/+$/, '');
@@ -17,7 +19,8 @@ const AGGREGATOR = RAW_AGGREGATOR.replace(/\/+$/, '');
 // Fallback publishers for resilience (add more if known working mainnet endpoints)
 const PUBLISHER_ENDPOINTS = [
   PUBLISHER,
-  'https://publisher.walrus.space',
+  'https://walrus-mainnet-publisher-1.staketab.org',
+  'https://publisher.walrus.space', // legacy testnet only, do not use for mainnet
 ];
 
 async function sleep(ms: number) {
@@ -85,14 +88,14 @@ export async function storeBlob(data: string, attempt = 1, endpointIndex = 0): P
         ? `This is happening from the Vercel server (production).\n` +
           `Walrus publisher DNS resolution is failing from the deployment region.\n\n` +
           `Quick checks:\n` +
-          `  - Visit https://publisher.walrus.space in browser (should resolve)\n` +
-          `  - nslookup publisher.walrus.space 8.8.8.8\n` +
+          `  - Visit the configured publisher in browser (should resolve)\n` +
+          `  - nslookup <your-publisher-host> 8.8.8.8\n` +
           `  - Wait a few minutes and retry (temporary DNS issue)\n\n` +
           `If persistent, set NEXT_PUBLIC_WALRUS_PUBLISHER in Vercel env vars to an alternative working publisher endpoint (if one is available).`
         : `Common on local Windows dev.\n\n` +
           `Quick fixes to try (in PowerShell):\n` +
           `  1. ipconfig /flushdns\n` +
-          `  2. nslookup publisher.walrus.space 8.8.8.8\n` +
+          `  2. nslookup <your-publisher-host> 8.8.8.8\n` +
           `  3. Restart your dev server\n` +
           `  4. Temporarily set your network DNS to 8.8.8.8 + 1.1.1.1\n\n` +
           `If it keeps happening, your network/VPN/firewall is blocking or rate-limiting DNS for walrus.space.`;

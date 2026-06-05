@@ -72,7 +72,7 @@ function SubmitClient() {
                 <div className="flex items-center gap-2">
                   <span className="mono text-[var(--gold)]">{stored.promptBlobId}</span>
                   <button onClick={() => copy(stored.promptBlobId)} className="copy-btn"><Copy size={14} /></button>
-                  <a href={`https://aggregator.walrus.space/v1/blobs/${stored.promptBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
+                  <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.promptBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
                 </div>
               </div>
               <div className="flex items-center justify-between bg-[var(--void-02)] p-3 rounded">
@@ -80,7 +80,7 @@ function SubmitClient() {
                 <div className="flex items-center gap-2">
                   <span className="mono text-[var(--gold)]">{stored.evalBlobId}</span>
                   <button onClick={() => copy(stored.evalBlobId)} className="copy-btn"><Copy size={14} /></button>
-                  <a href={`https://aggregator.walrus.space/v1/blobs/${stored.evalBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
+                  <a href={`https://aggregator.walrus-mainnet.walrus.space/v1/blobs/${stored.evalBlobId}`} target="_blank" className="text-xs text-[var(--gold)] underline">view blob</a>
                 </div>
               </div>
             </div>
