@@ -14,13 +14,20 @@ const RAW_AGGREGATOR = process.env.NEXT_PUBLIC_WALRUS_AGGREGATOR || 'https://agg
 const PUBLISHER = RAW_PUBLISHER.replace(/\/+$/, '');
 const AGGREGATOR = RAW_AGGREGATOR.replace(/\/+$/, '');
 
+// Fallback publishers for resilience (add more if known working mainnet endpoints)
+const PUBLISHER_ENDPOINTS = [
+  PUBLISHER,
+  'https://publisher.walrus.space',
+];
+
 async function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export async function storeBlob(data: string, attempt = 1): Promise<string> {
+export async function storeBlob(data: string, attempt = 1, endpointIndex = 0): Promise<string> {
   const maxAttempts = 5; // more attempts for flaky DNS
-  const url = `${PUBLISHER}/v1/blobs`;
+  const publisher = PUBLISHER_ENDPOINTS[endpointIndex] || PUBLISHER;
+  const url = `${publisher}/v1/blobs`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 20000); // 20s timeout per attempt
@@ -62,22 +69,37 @@ export async function storeBlob(data: string, attempt = 1): Promise<string> {
       const backoff = Math.min(1500 * Math.pow(2, attempt - 1), 8000);
       console.warn(`[walrus] Network error storing blob (attempt ${attempt}/${maxAttempts}). Retrying in ${backoff}ms...`, (err as Error).message);
       await sleep(backoff);
-      return storeBlob(data, attempt + 1);
+      return storeBlob(data, attempt + 1, endpointIndex);
+    }
+
+    if (isNetworkError && endpointIndex < PUBLISHER_ENDPOINTS.length - 1) {
+      console.warn(`[walrus] All retries failed for ${publisher}, trying next publisher endpoint...`);
+      return storeBlob(data, 1, endpointIndex + 1);
     }
 
     // Surface a helpful message for the common DNS/network case
     if (isNetworkError) {
       const causeMsg = (err as Error).cause ? ` Cause: ${(err as Error).cause}` : '';
+      const isVercel = !!process.env.VERCEL;
+      const advice = isVercel
+        ? `This is happening from the Vercel server (production).\n` +
+          `Walrus publisher DNS resolution is failing from the deployment region.\n\n` +
+          `Quick checks:\n` +
+          `  - Visit https://publisher.walrus.space in browser (should resolve)\n` +
+          `  - nslookup publisher.walrus.space 8.8.8.8\n` +
+          `  - Wait a few minutes and retry (temporary DNS issue)\n\n` +
+          `If persistent, set NEXT_PUBLIC_WALRUS_PUBLISHER in Vercel env vars to an alternative working publisher endpoint (if one is available).`
+        : `Common on local Windows dev.\n\n` +
+          `Quick fixes to try (in PowerShell):\n` +
+          `  1. ipconfig /flushdns\n` +
+          `  2. nslookup publisher.walrus.space 8.8.8.8\n` +
+          `  3. Restart your dev server\n` +
+          `  4. Temporarily set your network DNS to 8.8.8.8 + 1.1.1.1\n\n` +
+          `If it keeps happening, your network/VPN/firewall is blocking or rate-limiting DNS for walrus.space.`;
       throw new Error(
-        `Failed to reach Walrus publisher at ${PUBLISHER}.\n\n` +
+        `Failed to reach Walrus publisher at ${publisher}.\n\n` +
         `This is a DNS resolution problem (getaddrinfo EAI_AGAIN or ENOTFOUND).\n` +
-        `Common on Windows.\n\n` +
-        `Quick fixes to try (in PowerShell):\n` +
-        `  1. ipconfig /flushdns\n` +
-        `  2. nslookup publisher.walrus.space 8.8.8.8\n` +
-        `  3. Restart your dev server\n` +
-        `  4. Temporarily set your network DNS to 8.8.8.8 + 1.1.1.1\n\n` +
-        `If it keeps happening, your network/VPN/firewall is blocking or rate-limiting DNS for walrus.space.` +
+        advice +
         causeMsg
       );
     }

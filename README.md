@@ -95,7 +95,7 @@ Visit http://localhost:3000 to test locally.
 
 - `TATUM_API_KEY` — https://dashboard.tatum.io (for Sui RPC, optional for core flow)
 
-**Common gotcha on Windows:** Walrus blob storage (publisher.walrus.space) sometimes has DNS resolution problems (`EAI_AGAIN` / `ENOTFOUND`) from the Next.js dev server. The app now forces IPv4 + retries. If you see it, run `ipconfig /flushdns`, test with `nslookup publisher.walrus.space 8.8.8.8`, then restart `npm run dev`. Changing your network DNS to 8.8.8.8 + 1.1.1.1 almost always fixes it.
+**Common gotcha:** Walrus blob storage (publisher.walrus.space) can have intermittent DNS/reachability problems (`EAI_AGAIN` / `ENOTFOUND`) from the server (local or Vercel). The app now forces IPv4 + up to 5 retries with backoff + fallback endpoints. On Vercel: retry the submit or wait a few minutes. Check with `nslookup publisher.walrus.space 8.8.8.8`. Set `NEXT_PUBLIC_WALRUS_PUBLISHER` env var if using an alternative endpoint.
 - `OPENROUTER_API_KEY` — https://openrouter.ai (for AI evaluation with gemini-2.5-flash-lite free tier + fallbacks)
 - Firebase config keys (see `.env.local.example`) for Firestore metadata index. Add `NEXT_PUBLIC_FIREBASE_MEASUREMENT_ID` (GA4 Measurement ID from Firebase console) to enable Google Analytics via the Firebase SDK (in addition to Vercel Analytics).
 - Vercel Analytics is enabled via `@vercel/analytics` in `app/layout.tsx` (automatic on Vercel, no extra env).

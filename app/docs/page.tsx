@@ -160,7 +160,7 @@ body: { ..., author }
             </p>
 
             <p className="mt-2 text-[var(--ink-muted)] text-xs">
-              <strong>Walrus DNS errors (ENOTFOUND / EAI_AGAIN publisher.walrus.space):</strong> The Next.js server can't resolve the Walrus hostname (very common on Windows). The app now retries + forces IPv4. Quick fixes: <code>ipconfig /flushdns</code>, then <code>nslookup publisher.walrus.space 8.8.8.8</code>, restart dev server. If needed, set your adapter DNS to 8.8.8.8 / 1.1.1.1.
+              <strong>Walrus DNS / reachability errors (ENOTFOUND / EAI_AGAIN for publisher.walrus.space):</strong> The server (local or Vercel) can't resolve the Walrus publisher. The app retries automatically (up to 5x with backoff) + forces IPv4 + tries fallback endpoints. On Vercel: often temporary; retry submit or wait. Check <code>nslookup publisher.walrus.space 8.8.8.8</code>. If persistent, verify env var or try alternative publisher via <code>NEXT_PUBLIC_WALRUS_PUBLISHER</code>.
             </p>
           </div>
         </section>

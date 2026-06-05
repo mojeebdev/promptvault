@@ -77,9 +77,18 @@ export async function POST(req: NextRequest) {
     });
   } catch (error: unknown) {
     console.error('Store error:', error);
-    const message = error instanceof Error ? error.message : 'Failed to store prompt';
+    let userMessage = 'Failed to store prompt. Please try again later.';
+    if (error instanceof Error) {
+      if (error.message.includes('Walrus publisher') || error.message.includes('DNS resolution')) {
+        userMessage = 'Temporary issue reaching Walrus storage (DNS problem). Please try again in a few minutes.';
+      } else if (error.message.includes('AI evaluation')) {
+        userMessage = 'AI evaluation temporarily unavailable. Your prompt may still be stored with default evaluation.';
+      } else {
+        userMessage = error.message;
+      }
+    }
     return NextResponse.json(
-      { error: message },
+      { error: userMessage },
       { status: 500 }
     );
   }
