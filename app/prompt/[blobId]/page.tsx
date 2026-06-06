@@ -4,6 +4,7 @@ import { ScoreBadge } from '@/components/ui/ScoreBadge';
 import type { Evaluation } from '@/lib/openrouter';
 import Link from 'next/link';
 import { Plus, RefreshCw } from 'lucide-react';
+import { BlobIds } from '@/components/prompt/BlobIds';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -194,10 +195,7 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
             </div>
           </div>
 
-          <div className="mt-10 text-[10px] text-[var(--ink-muted)] mono break-all">
-            Blob ID: {blobId}
-            {evalBlobId && <> · Eval Blob: {evalBlobId}</>}
-          </div>
+          <BlobIds promptBlobId={blobId} evalBlobId={evalBlobId} />
         </>
       )}
 
