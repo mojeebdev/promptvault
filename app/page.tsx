@@ -1,7 +1,23 @@
 import { HeroSection } from '@/components/hero/HeroSection';
 import Link from 'next/link';
+import { collection, getDocs } from 'firebase/firestore';
+import { db, isFirebaseConfigured } from '@/lib/firebase';
 
-export default function LandingPage() {
+export default async function LandingPage() {
+  let promptsStored = 0;
+  let forksOnChain = 0;
+
+  if (isFirebaseConfigured && db) {
+    try {
+      const snapshot = await getDocs(collection(db, 'prompts'));
+      promptsStored = snapshot.size;
+      forksOnChain = snapshot.docs.filter((d) => !!d.data().parentBlobId).length;
+    } catch (e) {
+      // If Firestore fails (e.g. index not ready or rules), fall back to 0 so page still renders
+      promptsStored = 0;
+      forksOnChain = 0;
+    }
+  }
   return (
     <>
       <HeroSection />
@@ -48,12 +64,12 @@ export default function LandingPage() {
             </div>
           </div>
 
-          {/* Stats row (live-ish) */}
+          {/* Stats row (real numbers from Firestore) */}
           <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 text-center">
             {[
-              { label: 'Prompts Stored', value: '128' },
-              { label: 'Forks On-Chain', value: '47' },
-              { label: 'Models Supported', value: '4' },
+              { label: 'Prompts Stored', value: promptsStored },
+              { label: 'Forks On-Chain', value: forksOnChain },
+              { label: 'Models Supported', value: 5 },
             ].map((s, i) => (
               <div key={i} className="surface py-6 rounded-xl border border-[var(--void-border)]">
                 <div className="text-4xl font-semibold text-[var(--gold)]">{s.value}</div>
@@ -61,6 +77,9 @@ export default function LandingPage() {
               </div>
             ))}
           </div>
+          <p className="text-center text-[10px] text-[var(--ink-muted)] mt-2">
+            Live counts from Firestore metadata. Forks are tracked via parent links (real even if the new blob write used fallback).
+          </p>
         </div>
       </section>
 
