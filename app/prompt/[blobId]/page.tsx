@@ -3,6 +3,7 @@ import { ForkButton } from '@/components/vault/ForkButton';
 import { ScoreBadge } from '@/components/ui/ScoreBadge';
 import type { Evaluation } from '@/lib/openrouter';
 import Link from 'next/link';
+import { Plus, RefreshCw } from 'lucide-react';
 import { db, isFirebaseConfigured } from '@/lib/firebase';
 import { doc, getDoc } from 'firebase/firestore';
 
@@ -173,17 +174,24 @@ export default async function PromptDetailPage({ params }: { params: Promise<{ b
             </div>
           )}
 
-          <div className="mt-8 flex flex-wrap gap-3">
-            <ForkButton promptBlobId={blobId} title={promptData.title} />
-            <Link href="/submit" className="btn-ghost">Submit another prompt</Link>
-            {isFallback && (
-              <form action="/api/retry-walrus" method="POST" className="inline">
-                <input type="hidden" name="id" value={blobId} />
-                <button type="submit" className="btn-ghost">
-                  Retry storing to Walrus
-                </button>
-              </form>
-            )}
+          <div className="mt-8 p-4 bg-[var(--void-02)] rounded-xl border border-[var(--gold-border)]">
+            <div className="text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mb-3">Actions</div>
+            <div className="flex flex-wrap gap-3">
+              <ForkButton promptBlobId={blobId} title={promptData.title} className="text-[var(--gold)]" />
+              <Link href="/submit" className="btn-ghost inline-flex items-center gap-2">
+                <Plus size={16} />
+                Submit another prompt
+              </Link>
+              {isFallback && (
+                <form action="/api/retry-walrus" method="POST" className="inline">
+                  <input type="hidden" name="id" value={blobId} />
+                  <button type="submit" className="btn-ghost inline-flex items-center gap-2 text-[var(--gold)]">
+                    <RefreshCw size={16} />
+                    Retry storing to Walrus
+                  </button>
+                </form>
+              )}
+            </div>
           </div>
 
           <div className="mt-10 text-[10px] text-[var(--ink-muted)] mono break-all">

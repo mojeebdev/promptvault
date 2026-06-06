@@ -5,7 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import { SubmitForm } from '@/components/submit/SubmitForm';
 import { EvaluationPanel } from '@/components/submit/EvaluationPanel';
 import { Evaluation } from '@/lib/openrouter';
-import { Copy } from 'lucide-react';
+import { Copy, Plus } from 'lucide-react';
 import { useCurrentAccount } from '@mysten/dapp-kit';
 
 interface StoredData {
@@ -105,9 +105,15 @@ function SubmitClient() {
           {/* Evaluation */}
           <EvaluationPanel evaluation={stored.evaluation} originalPrompt={stored.prompt} />
 
-          <div className="text-center space-x-4">
-            <a href="/vault" className="btn-primary">View in the Vault →</a>
-            <a href="/submit" className="btn-ghost">Submit another prompt</a>
+          <div className="mt-8 p-4 bg-[var(--void-02)] rounded-xl border border-[var(--gold-border)] text-center">
+            <div className="text-[10px] uppercase tracking-widest text-[var(--ink-muted)] mb-3">Next steps</div>
+            <div className="flex flex-wrap justify-center gap-3">
+              <a href="/vault" className="btn-primary">View in the Vault →</a>
+              <a href="/submit" className="btn-ghost inline-flex items-center gap-2">
+                <Plus size={16} />
+                Submit another prompt
+              </a>
+            </div>
           </div>
         </div>
       )}
